@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tactistat"
+version = "0.1.0"
+description = "Agentic RAG over football event data and Wikipedia, with a research-grade evaluation harness."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "tchoang11" }]
+
+dependencies = [
+    # --- Data ---------------------------------------------------------------
+    "statsbombpy>=1.14",
+    "pandas>=2.2",
+    "numpy>=1.26,<3",
+    "pyarrow>=15",              # parquet writer for processed tables
+    "requests>=2.32",           # Wikipedia REST API
+
+    # --- Retrieval ----------------------------------------------------------
+    "sentence-transformers>=3.0",
+    "faiss-cpu>=1.8",
+    "rank-bm25>=0.2.2",
+
+    # --- LLM providers ------------------------------------------------------
+    # `openai` is the client for EVERY OpenAI-compatible endpoint: Groq,
+    # Cerebras, OpenRouter, GitHub Models, Ollama, vLLM, OpenAI itself.
+    "openai>=1.50",
+    "google-genai>=1.0",        # Gemini speaks its own wire format
+
+    # --- Stats / plotting ---------------------------------------------------
+    "scipy>=1.13",              # bootstrap CI (Section 7)
+    "matplotlib>=3.8",          # ablation charts
+
+    # --- Plumbing -----------------------------------------------------------
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+tactistat = "tactistat.cli:main"
+
+[project.urls]
+Repository = "https://github.com/tchoang11/fb-tactistat"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

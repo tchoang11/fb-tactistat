@@ -1,0 +1,2562 @@
+[
+  {
+    "query": "2022 FIFA World Cup",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup",
+    "detail": "direct",
+    "sections": 54
+  },
+  {
+    "query": "2022 FIFA World Cup Group A",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group A",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "2022 FIFA World Cup Group B",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group B",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "2022 FIFA World Cup Group C",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group C",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "2022 FIFA World Cup Group D",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group D",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "2022 FIFA World Cup Group E",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group E",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "2022 FIFA World Cup Group F",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group F",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "2022 FIFA World Cup Group G",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group G",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "2022 FIFA World Cup Group H",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup Group H",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "2022 FIFA World Cup final",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup final",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "2022 FIFA World Cup knockout stage",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup knockout stage",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "2022 FIFA World Cup squads",
+    "entity_type": "tournament",
+    "status": "ok",
+    "title": "2022 FIFA World Cup squads",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Aaron Mooy",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Aaron Mooy",
+    "detail": "direct",
+    "sections": 19
+  },
+  {
+    "query": "Abdelhamid Sabiri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Abdelhamid Sabiri",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Abderrazak Hamdallah",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Abderrazak Hamdallah",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Abdou Diallo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Abdou Diallo",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Achraf Dari",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Achraf Dari",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Achraf Hakimi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Achraf Hakimi",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Adrien Rabiot",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Adrien Rabiot",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Alejandro Balde",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Alejandro Balde",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Aleksandar Mitrović",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Aleksandar Mitrović",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Alexis MacAllister",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Alexis Mac Allister",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Alisson",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Alisson Becker",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Alphonso Davies",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Alphonso Davies",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Andreas Christensen",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Andreas Christensen",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Andrej Kramarić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Andrej Kramarić",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Andries Noppert",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Andries Noppert",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "André Ayew",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "André Ayew",
+    "detail": "direct",
+    "sections": 21
+  },
+  {
+    "query": "Antoine Griezmann",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Antoine Griezmann",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Antonee Robinson",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Antonee Robinson",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Antony",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Antony (footballer, born 2000)",
+    "detail": "search -> Antony (footballer, born 2000)",
+    "sections": 13
+  },
+  {
+    "query": "Ao Tanaka",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ao Tanaka",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Argentina national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Argentina national football team",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Association football positions",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Association football positions",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Association football referee",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Referee (association football)",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Association football tactics",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Association football tactics",
+    "detail": "direct",
+    "sections": 30
+  },
+  {
+    "query": "Aurélien Tchouaméni",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Aurélien Tchouaméni",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Australia national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Australia national soccer team",
+    "detail": "direct",
+    "sections": 1
+  },
+  {
+    "query": "Aziz Behich",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Aziz Behich",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Azzedine Ounahi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Azzedine Ounahi",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Bamba Dieng",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bamba Dieng",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Bartosz Bereszyński",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bartosz Bereszyński",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Belgium national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Belgium national football team",
+    "detail": "direct",
+    "sections": 26
+  },
+  {
+    "query": "Bernardo Silva",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bernardo Silva",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Borna Sosa",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Borna Sosa",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Boulaye Dia",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Boulaye Dia",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Brazil national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Brazil national football team",
+    "detail": "direct",
+    "sections": 27
+  },
+  {
+    "query": "Breel Embolo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Breel Embolo",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Brenden Aaronson",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Brenden Aaronson",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Bruno Fernandes",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bruno Fernandes",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Bruno Petković",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bruno Petković",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Bukayo Saka",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Bukayo Saka",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Cameroon national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Cameroon national football team",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Canada national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Canada men's national soccer team",
+    "detail": "search -> Canada men's national soccer team",
+    "sections": 17
+  },
+  {
+    "query": "Captain (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Captain (association football)",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Carlos Soler",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Carlos Soler",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Casemiro",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Casemiro",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Catenaccio",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Catenaccio",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Cho Kyu-Sung",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Cho Gue-sung",
+    "detail": "search -> Cho Gue-sung",
+    "sections": 6
+  },
+  {
+    "query": "Christian Pulisic",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Christian Pulisic",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Clean sheet",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Shutout",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Cody Gakpo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Cody Gakpo",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Corner kick",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Corner kick",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Costa Rica national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Costa Rica national football team",
+    "detail": "direct",
+    "sections": 19
+  },
+  {
+    "query": "Counter-attack",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Counterattack",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Craig Goodwin",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Craig Goodwin",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Cristian Romero",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Cristian Romero",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Cristiano Ronaldo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Cristiano Ronaldo",
+    "detail": "direct",
+    "sections": 28
+  },
+  {
+    "query": "Croatia national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Croatia national football team",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Cross (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Cross (association football)",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Daichi Kamada",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Daichi Kamada",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Daizen Maeda",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Daizen Maeda",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Daley Blind",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Daley Blind",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Daniel Olmo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Dani Olmo",
+    "detail": "search -> Dani Olmo",
+    "sections": 9
+  },
+  {
+    "query": "Davy Klaassen",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Davy Klaassen",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Dayotchanculle Upamecano",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Dayot Upamecano",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Declan Rice",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Declan Rice",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Defender (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Defender (association football)",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Dejan Lovren",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Dejan Lovren",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Denmark national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Denmark national football team",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Denzel Dumfries",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Denzel Dumfries",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Diogo Costa",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Diogo Costa",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Djibril Sow",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Djibril Sow",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Dominik Livaković",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Dominik Livaković",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Dribbling",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Dribbling",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Dušan Vlahović",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Dušan Vlahović",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Ecuador national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Ecuador national football team",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Edouard Mendy",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Édouard Mendy",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Emiliano Martínez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Emiliano Martínez",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "England national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "England national football team",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Enner Valencia",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Enner Valencia",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Enzo Fernandez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Enzo Fernández",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Eric Maxim Choupo-Moting",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Eric Maxim Choupo-Moting",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Expected goals",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Expected goals",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Famara Diédhiou",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Famara Diédhiou",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Ferrán Torres",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ferran Torres",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Formation (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Formation (association football)",
+    "detail": "direct",
+    "sections": 35
+  },
+  {
+    "query": "Forward (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Forward (association football)",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "France national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "France national football team",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Fred",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Fred (footballer, born 1993)",
+    "detail": "search -> Fred (footballer, born 1993)",
+    "sections": 13
+  },
+  {
+    "query": "Free kick (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Free kick (association football)",
+    "detail": "direct",
+    "sections": 34
+  },
+  {
+    "query": "Frenkie de Jong",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Frenkie de Jong",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Gareth Bale",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Gareth Bale",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Gavi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Gavi (footballer)",
+    "detail": "search -> Gavi (footballer)",
+    "sections": 10
+  },
+  {
+    "query": "Gegenpressing",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Association football tactics",
+    "detail": "direct",
+    "sections": 30
+  },
+  {
+    "query": "Germany national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Germany national football team",
+    "detail": "direct",
+    "sections": 30
+  },
+  {
+    "query": "Ghana national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Ghana national football team",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Giorgian De Arrascaeta",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Giorgian de Arrascaeta",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Glossary of association football terms",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Glossary of association football terms",
+    "detail": "direct",
+    "sections": 28
+  },
+  {
+    "query": "Goalkeeper (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Goalkeeper (association football)",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Gonzalo Montiel",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Gonzalo Montiel",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Gonçalo Ramos",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Gonçalo Ramos",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Granit Xhaka",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Granit Xhaka",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Grzegorz Krychowiak",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Grzegorz Krychowiak",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Haji Wright",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Haji Wright",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Hakim Ziyech",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Hakim Ziyech",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Harry Kane",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Harry Kane",
+    "detail": "direct",
+    "sections": 26
+  },
+  {
+    "query": "Harry Maguire",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Harry Maguire",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Harry Souttar",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Harry Souttar",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Henry Martín",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Henry Martín",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Hugo Lloris",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Hugo Lloris",
+    "detail": "direct",
+    "sections": 23
+  },
+  {
+    "query": "Hwang Hee-Chan",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Hwang Hee-chan",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Hwang In-Beom",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Hwang In-beom",
+    "detail": "search -> Hwang In-beom",
+    "sections": 11
+  },
+  {
+    "query": "Hwang Ui-jo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Hwang Ui-jo",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Ibrahima Konaté",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ibrahima Konaté",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Iran national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Iran national football team",
+    "detail": "direct",
+    "sections": 27
+  },
+  {
+    "query": "Ismail Jakobs",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ismail Jakobs",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Ismaïla Sarr",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ismaïla Sarr",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Ivan Perišić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ivan Perišić",
+    "detail": "direct",
+    "sections": 21
+  },
+  {
+    "query": "Jack Grealish",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jack Grealish",
+    "detail": "direct",
+    "sections": 19
+  },
+  {
+    "query": "Jackson Irvine",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jackson Irvine",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Jakub Kamiński",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jakub Kamiński",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Jakub Piotr Kiwior",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jakub Kiwior",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Japan national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Japan national football team",
+    "detail": "direct",
+    "sections": 27
+  },
+  {
+    "query": "Jawad El Yamiq",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jawad El Yamiq",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Jean-Charles Castelletto",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jean-Charles Castelletto",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "John Stones",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "John Stones",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Jordan Henderson",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jordan Henderson",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Jordan Pickford",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jordan Pickford",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Jordi Alba",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jordi Alba",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Josip Juranović",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Josip Juranović",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "João Cancelo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "João Cancelo",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "João Félix",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "João Félix",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Joško Gvardiol",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Joško Gvardiol",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Jude Bellingham",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jude Bellingham",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Jules Koundé",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jules Koundé",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Julián Álvarez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Julián Alvarez",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Jung Woo-Young",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jung Woo-young",
+    "detail": "direct",
+    "sections": 3
+  },
+  {
+    "query": "Junya Ito",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Junya Itō",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Jurriën Timber",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Jurriën Timber",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Kai Havertz",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kai Havertz",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Kalidou Koulibaly",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kalidou Koulibaly",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Kamil Glik",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kamil Glik",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Kaoru Mitoma",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kaoru Mitoma",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Keanu Baccus",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Keanu Baccus",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Keysher Fuller Spence",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Keysher Fuller",
+    "detail": "search -> Keysher Fuller",
+    "sections": 3
+  },
+  {
+    "query": "Kim Jin-Su",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kim Jin-su",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Kim Moon-Hwan",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kim Moon-hwan",
+    "detail": "search -> Kim Moon-hwan",
+    "sections": 4
+  },
+  {
+    "query": "Kim Seung-Gyu",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kim Seung-gyu",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Kim Young-Gwon",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kim Young-gwon",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Kingsley Coman",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kingsley Coman",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Krystian Bielik",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Krystian Bielik",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Kye Rowles",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kye Rowles",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Kylian Mbappé",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Kylian Mbappé",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Lautaro Martínez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lautaro Martínez",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Leandro Paredes",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Leandro Paredes",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Lee Kang-In",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lee Kang-in",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Lionel Messi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lionel Messi",
+    "detail": "direct",
+    "sections": 26
+  },
+  {
+    "query": "Lisandro Martínez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lisandro Martínez",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Long ball",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Long ball",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Lovro Majer",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lovro Majer",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Lucas Paquetá",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Lucas Paquetá",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Luis Chávez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Luis Chávez (footballer)",
+    "detail": "search -> Luis Chávez (footballer)",
+    "sections": 4
+  },
+  {
+    "query": "Luka Modrić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Luka Modrić",
+    "detail": "direct",
+    "sections": 32
+  },
+  {
+    "query": "Luke Shaw",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Luke Shaw",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Manuel Akanji",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Manuel Akanji",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Marcelo Brozović",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marcelo Brozović",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Marco Asensio Willemsen",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marco Asensio",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Marcos Acuña",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marcos Acuña",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Marcus Rashford",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marcus Rashford",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Marcus Thuram",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marcus Thuram",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Mario Pašalić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mario Pašalić",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Marking (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Marking (association football)",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Marko Livaja",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marko Livaja",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Marquinhos",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marquinhos",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Marten de Roon",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Marten de Roon",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Mason Mount",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mason Mount",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Mat Ryan",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mathew Ryan",
+    "detail": "search -> Mathew Ryan",
+    "sections": 17
+  },
+  {
+    "query": "Mateo Kovačić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mateo Kovačić",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Mathew Leckie",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mathew Leckie",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Matt Turner",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Matt Turner (soccer)",
+    "detail": "search -> Matt Turner (soccer)",
+    "sections": 16
+  },
+  {
+    "query": "Matty Cash",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Matty Cash",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Maya Yoshida",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Maya Yoshida",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Mehdi Taremi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mehdi Taremi",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Memphis Depay",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Memphis Depay",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Mexico national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Mexico national football team",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Michy Batshuayi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Michy Batshuayi",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Midfielder",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Midfielder",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Miloš Degenek",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Miloš Degenek",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Mislav Oršić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mislav Oršić",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Mitchell Duke",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mitch Duke",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Mohamed Salisu",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mohammed Salisu",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Mohammed Kudus",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mohammed Kudus",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Mohammed Muntari",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Mohammed Muntari",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Moisés Caicedo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Moisés Caicedo",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Morocco national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Morocco national football team",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Nahuel Molina",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nahuel Molina",
+    "detail": "direct",
+    "sections": 5
+  },
+  {
+    "query": "Nampalys Mendy",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nampalys Mendy",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Nathan Aké",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nathan Aké",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Nayef Aguerd",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nayef Aguerd",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Netherlands national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Netherlands national football team",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Neymar",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Neymar",
+    "detail": "direct",
+    "sections": 39
+  },
+  {
+    "query": "Niclas Füllkrug",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Niclas Füllkrug",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Nico Williams",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nico Williams",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Nicolás Otamendi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nicolás Otamendi",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Nicolás Tagliafico",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nicolás Tagliafico",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Nikola Vlašić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Nikola Vlašić",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Noussair Mazraoui",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Noussair Mazraoui",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Offside (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Offside (association football)",
+    "detail": "direct",
+    "sections": 28
+  },
+  {
+    "query": "Olivier Giroud",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Olivier Giroud",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Osman Bukari",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Osman Bukari",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Ousmane Dembélé",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ousmane Dembélé",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Overtime (sports)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Overtime (sports)",
+    "detail": "direct",
+    "sections": 29
+  },
+  {
+    "query": "Paik Seung-Ho",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Paik Seung-ho",
+    "detail": "search -> Paik Seung-ho",
+    "sections": 9
+  },
+  {
+    "query": "Passing (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Passing (association football)",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Pedri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Pedri",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Penalty kick (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Penalty kick (association football)",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Penalty shoot-out (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Penalty shoot-out (association football)",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Pepe",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Pepe",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Phil Foden",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Phil Foden",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Piotr Zieliński",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Piotr Zieliński",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Poland national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Poland national football team",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Portugal national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Portugal national football team",
+    "detail": "direct",
+    "sections": 19
+  },
+  {
+    "query": "Przemysław Frankowski",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Przemysław Frankowski",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Qatar national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Qatar national football team",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Rafael Leão",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rafael Leão",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Raheem Sterling",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Raheem Sterling",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Ramin Rezaeian",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ramin Rezaeian",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Randal Kolo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Randal Kolo Muani",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Raphaël Guerreiro",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Raphaël Guerreiro",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Raphaël Varane",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Raphaël Varane",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Raphinha",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Raphinha",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Remo Freuler",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Remo Freuler",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Ricardo Horta",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ricardo Horta",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Ricardo Rodríguez",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ricardo Rodriguez (footballer)",
+    "detail": "search -> Ricardo Rodriguez (footballer)",
+    "sections": 14
+  },
+  {
+    "query": "Richarlison",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Richarlison",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Riley McGree",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Riley McGree",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Ritsu Doan",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ritsu Dōan",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Robert Lewandowski",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Robert Lewandowski",
+    "detail": "direct",
+    "sections": 26
+  },
+  {
+    "query": "Rodri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rodri (footballer, born 1996)",
+    "detail": "search -> Rodri (footballer, born 1996)",
+    "sections": 16
+  },
+  {
+    "query": "Rodrigo De Paul",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rodrigo De Paul",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Rodrygo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rodrygo",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Romain Saïss",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Romain Saïss",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Roozbeh Cheshmi",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rouzbeh Cheshmi",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Ruben Vargas",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rubén Vargas",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Rúben Dias",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rúben Dias",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Rúben Neves",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Rúben Neves",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Saleh Al Shehri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Saleh Al-Shehri",
+    "detail": "search -> Saleh Al-Shehri",
+    "sections": 6
+  },
+  {
+    "query": "Salem Al Dawsari",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Salem Al-Dawsari",
+    "detail": "search -> Salem Al-Dawsari",
+    "sections": 5
+  },
+  {
+    "query": "Saudi Arabia national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Saudi Arabia national football team",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Selim Amallah",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Selim Amallah",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Senegal national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Senegal national football team",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Serbia national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Serbia national football team",
+    "detail": "direct",
+    "sections": 28
+  },
+  {
+    "query": "Serge Gnabry",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Serge Gnabry",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Sergej Milinković-Savić",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Sergej Milinković-Savić",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Sergio Busquets",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Sergio Busquets",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Sergiño Dest",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Sergiño Dest",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Shūichi Gonda",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Shūichi Gonda",
+    "detail": "direct",
+    "sections": 3
+  },
+  {
+    "query": "Sofiane Boufal",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Sofiane Boufal",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Sofyan Amrabat",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Sofyan Amrabat",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Son Heung-Min",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Son Heung-min",
+    "detail": "direct",
+    "sections": 21
+  },
+  {
+    "query": "South Korea national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "South Korea national football team",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Spain national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Spain national football team",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Steven Berghuis",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Steven Berghuis",
+    "detail": "direct",
+    "sections": 14
+  },
+  {
+    "query": "Steven Bergwijn",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Steven Bergwijn",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Strahinja Pavlović",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Strahinja Pavlović",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Substitute (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Substitute (association football)",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Switzerland national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Switzerland national football team",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Tackle (football move)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Tackle (football move)",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Takuma Asano",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Takuma Asano",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Teun Koopmeiners",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Teun Koopmeiners",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Theo Hernández",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Théo Hernandez",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Thiago Silva",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Thiago Silva",
+    "detail": "direct",
+    "sections": 30
+  },
+  {
+    "query": "Throw-in",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Throw-in",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Tiki-taka",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Tiki-taka",
+    "detail": "direct",
+    "sections": 19
+  },
+  {
+    "query": "Tim Ream",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Tim Ream",
+    "detail": "direct",
+    "sections": 9
+  },
+  {
+    "query": "Timothy Weah",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Timothy Weah",
+    "detail": "direct",
+    "sections": 13
+  },
+  {
+    "query": "Total Football",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Total Football",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Tunisia national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Tunisia national football team",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Tyler Adams",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Tyler Adams",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Unai Simón",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Unai Simón",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "United States national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "United States men's national soccer team",
+    "detail": "search -> United States men's national soccer team",
+    "sections": 21
+  },
+  {
+    "query": "Uruguay national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Uruguay national football team",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Video assistant referee",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Video assistant referee",
+    "detail": "direct",
+    "sections": 12
+  },
+  {
+    "query": "Vincent Aboubakar",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Vincent Aboubakar",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "Vinícius Júnior",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Vinícius Júnior",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Virgil van Dijk",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Virgil van Dijk",
+    "detail": "direct",
+    "sections": 24
+  },
+  {
+    "query": "Wahbi Khazri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Wahbi Khazri",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Wales national football team",
+    "entity_type": "team",
+    "status": "ok",
+    "title": "Wales national football team",
+    "detail": "direct",
+    "sections": 22
+  },
+  {
+    "query": "Walker Zimmerman",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Walker Zimmerman",
+    "detail": "direct",
+    "sections": 7
+  },
+  {
+    "query": "Wataru Endo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Wataru Endo",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Weston McKennie",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Weston McKennie",
+    "detail": "direct",
+    "sections": 15
+  },
+  {
+    "query": "William Carvalho",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "William Carvalho",
+    "detail": "direct",
+    "sections": 8
+  },
+  {
+    "query": "Winger (association football)",
+    "entity_type": "concept",
+    "status": "ok",
+    "title": "Midfielder",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Wojciech Szczęsny",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Wojciech Szczęsny",
+    "detail": "direct",
+    "sections": 25
+  },
+  {
+    "query": "Wout Weghorst",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Wout Weghorst",
+    "detail": "direct",
+    "sections": 16
+  },
+  {
+    "query": "Xherdan Shaqiri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Xherdan Shaqiri",
+    "detail": "direct",
+    "sections": 20
+  },
+  {
+    "query": "Yahia Attiyat allah",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Yahya Attiyat Allah",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Yassine Bounou",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Yassine Bounou",
+    "detail": "direct",
+    "sections": 11
+  },
+  {
+    "query": "Yeltsin Tejeda",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Yeltsin Tejeda",
+    "detail": "direct",
+    "sections": 6
+  },
+  {
+    "query": "Youssef En-Nesyri",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Youssef En-Nesyri",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Youssouf Fofana",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Youssouf Fofana (footballer, born 1999)",
+    "detail": "search -> Youssouf Fofana (footballer, born 1999)",
+    "sections": 8
+  },
+  {
+    "query": "Youssouf Sabaly",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Youssouf Sabaly",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Yunus Dimoara Musah",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Yunus Musah",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "Yuto Nagatomo",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Yūto Nagatomo",
+    "detail": "direct",
+    "sections": 18
+  },
+  {
+    "query": "Zakaria Aboukhlal",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Zakaria Aboukhlal",
+    "detail": "direct",
+    "sections": 4
+  },
+  {
+    "query": "Álvaro Morata",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Álvaro Morata",
+    "detail": "direct",
+    "sections": 17
+  },
+  {
+    "query": "Ángel Di María",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Ángel Di María",
+    "detail": "direct",
+    "sections": 21
+  },
+  {
+    "query": "Éder Militão",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "Éder Militão",
+    "detail": "direct",
+    "sections": 10
+  },
+  {
+    "query": "İlkay Gündoğan",
+    "entity_type": "player",
+    "status": "ok",
+    "title": "İlkay Gündoğan",
+    "detail": "direct",
+    "sections": 15
+  }
+]

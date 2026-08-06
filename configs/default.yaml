@@ -1,0 +1,187 @@
+# TactiStat baseline configuration
+# =================================
+# This file defines the BASELINE system. Every ablation in experiments/ is
+# expressed as a diff against this file, so "what did we change?" is always
+# answerable by diffing two configs rather than reading code history.
+#
+# Override any leaf from the CLI with dotted paths:
+#     tactistat ask --set rag.top_k=10 --set models.synthesis=gemini:2.5-flash "..."
+
+# --- Data scope ---------------------------------------------------------------
+# Section 4.1 of the spec: pick exactly ONE competition and stay inside it.
+# FIFA World Cup 2022 = 64 matches, complete event data, plus StatsBomb 360
+# freeze-frames. Wikipedia coverage for these teams/players/matches is dense,
+# which matters because the RAG half of the system depends on it.
+dataset:
+  competition_id: 43
+  season_id: 106
+  competition_name: "FIFA World Cup"
+  season_name: "2022"
+  # Minutes a player must have accumulated before per-90 rates are reported.
+  # Below this, per-90 is dominated by noise (a striker with 8 minutes and one
+  # goal reads as 11.25 goals/90). Section 7 revisits this with bootstrap CIs.
+  min_minutes_for_per90: 270
+
+# --- Which model plays which role --------------------------------------------
+# Handles resolve through configs/models.yaml.
+#
+# Router and synthesis intentionally default to a different provider than the
+# judge. Using one model to both write and grade an answer invites
+# self-preference bias: LLM judges systematically favour text from their own
+# family. Keeping the judge in a separate family removes that confound from
+# every faithfulness number in the report.
+# Every handle here was confirmed working against the live endpoint on
+# 2026-08-06; see configs/models.yaml for measured latency and
+# `python scripts/probe_models.py` to re-verify.
+models:
+  # Router must emit one of three exact labels. gpt-oss-20b supports strict
+  # json_schema decoding on Groq, so an invalid label is impossible by
+  # construction rather than something a retry loop has to clean up.
+  # (llama-3.1-8b is ~4x faster but only supports loose json_object mode; it is
+  # registered as the cheap alternative for the router cost/latency ablation.)
+  router: groq:gpt-oss-20b
+
+  # Synthesis writes prose, not JSON, so loose mode is fine and the larger
+  # model is worth its extra ~370ms.
+  synthesis: groq:llama-3.3-70b
+
+  # Different provider AND different model family from synthesis, on purpose.
+  # gemini-3.5-flash scores similarly but takes ~12s per call, which turns a
+  # 50-question eval into a 10-minute wait; 3.6-flash answers in ~2s.
+  judge: gemini:3.6-flash
+
+# Deterministic-ish decoding. Temperature 0 does not guarantee identical output
+# across runs, but it removes the largest source of eval variance.
+llm:
+  temperature: 0.0
+  max_tokens: 1024
+  timeout_seconds: 60
+  max_retries: 3
+  # Cache identical (model, system, user) triples on disk so re-running an eval
+  # after a retrieval-only change does not re-bill the same LLM calls.
+  cache_enabled: true
+  cache_dir: data/cache/llm
+
+# --- Router -------------------------------------------------------------------
+router:
+  # few_shot = LLM prompted with labelled examples (baseline)
+  # keyword  = zero-LLM heuristic baseline, for the cost/latency ablation
+  strategy: few_shot
+  labels: [STAT, TACTICAL, HYBRID]
+
+# --- Stats tool ---------------------------------------------------------------
+stats_tool:
+  processed_dir: data/processed
+  # Metrics the query interface exposes. Each maps to a column produced by
+  # src/tactistat/stats_tool/aggregate.py.
+  metrics:
+    - goals
+    - xg
+    - shots
+    - passes_completed
+    - pass_accuracy
+    - key_passes
+    - dribbles_completed
+    - tackles
+    - interceptions
+  per90_metrics: [goals, xg, shots, passes_completed, key_passes]
+
+# --- Wikipedia corpus ---------------------------------------------------------
+# Section 4.2: Wikipedia rather than FBref/sports-reference. Clear CC BY-SA
+# licensing, a stable API, and no anti-bot arms race -- those sites sit behind
+# Cloudflare and scraping them costs effort that buys nothing here.
+#
+# Scope is DERIVED FROM THE EVENT DATA, not hand-written. Every page traces
+# back to a team or player that actually appears in the 64 matches, so the
+# corpus cannot drift out of sync with the stats half of the system.
+wikipedia:
+  language: en
+  # Wikimedia's User-Agent policy asks for a descriptive agent with a contact
+  # point. Requests without one get rate-limited or blocked.
+  user_agent: "TactiStat/0.1 (https://github.com/tchoang11/fb-tactistat) python-requests"
+
+  # Player selection. 681 players appeared at the tournament; most are squad
+  # members with two-line stubs that add noise to the index without ever being
+  # a useful retrieval target. Four appearances means a player survived the
+  # group stage as a regular.
+  min_appearances: 4
+  # ...but a scorer is notable regardless of how little they played, and STAT
+  # questions gravitate towards goals, so never drop one.
+  include_all_scorers: true
+
+  # Politeness. The first crawl attempt used 4 workers each sleeping 0.1s
+  # between calls, which bursts to roughly 10 requests/second and drew HTTP 429
+  # on 104 of 327 pages. Per-thread sleeps do not bound a global rate, so the
+  # cap is enforced by a shared limiter instead, and 429/503 are retried with
+  # backoff that honours the server's Retry-After header.
+  max_workers: 4
+  requests_per_second: 5
+  max_retries: 5
+  timeout_seconds: 30
+  # Wikimedia asks read-heavy clients to send maxlag so requests are shed when
+  # their database replicas fall behind, rather than deepening the backlog.
+  maxlag_seconds: 5
+
+  # Sections that carry citations and navigation rather than prose. Indexing
+  # them pollutes retrieval with reference lists that match any query
+  # containing a player's name.
+  drop_sections:
+    - References
+    - External links
+    - See also
+    - Notes
+    - Bibliography
+    - Further reading
+    - Sources
+    - Citations
+  # Sections shorter than this are headings with almost no body; they cannot
+  # answer a question but they can outrank a section that could.
+  min_section_chars: 120
+
+# --- RAG tool -----------------------------------------------------------------
+rag:
+  corpus_dir: data/processed/wikipedia
+  index_dir: data/index
+
+  # Baseline chunking: split on Wikipedia section boundaries rather than a fixed
+  # token window, on the hypothesis that a section is already a coherent
+  # semantic unit. Ablation 6.3 tests this against fixed 300/500-token windows.
+  chunking:
+    strategy: section          # section | fixed
+    max_tokens: 512            # sections longer than this get sub-split
+    overlap_tokens: 0          # only used by the `fixed` strategy
+
+  embedding:
+    model: BAAI/bge-small-en-v1.5
+    batch_size: 32
+    normalize: true
+
+  retrieval:
+    mode: dense                # dense | bm25 | hybrid
+    top_k: 5
+    hybrid_alpha: 0.5          # weight on dense scores when mode == hybrid
+
+  rerank:
+    enabled: false
+    model: cross-encoder/ms-marco-MiniLM-L-6-v2
+    # Retrieve this many candidates, rerank, keep retrieval.top_k.
+    candidate_k: 20
+
+# --- Synthesis ----------------------------------------------------------------
+synthesis:
+  # Refuse to answer rather than guess when the tools return nothing usable.
+  # A RAG system that fabricates is worse than one that abstains, and
+  # abstention rate is reported alongside accuracy in REPORT.md.
+  allow_abstain: true
+  require_citations: true
+
+# --- Evaluation ---------------------------------------------------------------
+eval:
+  test_set: eval/test_set.json
+  results_dir: eval/results
+  recall_at_k: [1, 3, 5, 10]
+  # Section 7: bootstrap resampling for player-comparison questions.
+  bootstrap:
+    n_resamples: 10000
+    confidence_level: 0.95
+    seed: 42

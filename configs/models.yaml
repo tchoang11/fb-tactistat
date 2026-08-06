@@ -1,0 +1,151 @@
+# Model registry
+# ==============
+# Every model in TactiStat is addressed as "<provider>:<alias>", e.g.
+# "groq:llama-3.3-70b". This file is the single place that maps such a handle
+# onto a concrete endpoint, so adding a provider never requires touching Python.
+#
+# `kind` selects the client adapter:
+#   openai_compat -> src/tactistat/llm/clients/openai_compat.py
+#   gemini        -> src/tactistat/llm/clients/gemini.py
+#
+# Most providers below are OpenAI-compatible and therefore share one adapter;
+# they differ only in `base_url` and which environment variable holds the key.
+#
+# ---------------------------------------------------------------------------
+# `json_mode` -- how hard the endpoint can constrain output. Router and judge
+# both need machine-readable output, and support is uneven even *within* one
+# provider, so the adapter degrades along this ladder:
+#
+#   schema : native JSON-Schema-constrained decoding. Output is guaranteed to
+#            match, so no retry loop is needed.
+#   object : "valid JSON, shape unspecified". The adapter injects the schema
+#            into the prompt and validates client-side, retrying on mismatch.
+#   none   : free text. The adapter extracts the first JSON object it finds.
+#
+# Do not trust this field blindly -- providers change it silently. Re-measure:
+#
+#     python scripts/probe_models.py
+#
+# `verified` records when a model was last confirmed working end-to-end and how
+# long one small structured call took. A model absent from a provider's live
+# list, or answering 404/429 on the free tier, is commented out rather than
+# deleted, so the next person knows it was considered and why it is not used.
+# ---------------------------------------------------------------------------
+
+providers:
+
+  groq:
+    kind: openai_compat
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    signup_url: https://console.groq.com/keys
+    free_tier: "~30 RPM, ~1k requests/day per model, no credit card"
+    models:
+      # Only the gpt-oss family accepts strict json_schema on Groq today.
+      # The Llama models reject it with HTTP 400 but honour json_object.
+      gpt-oss-120b:
+        id: openai/gpt-oss-120b
+        json_mode: schema
+        verified: "2026-08-06, 728ms"
+      gpt-oss-20b:
+        id: openai/gpt-oss-20b
+        json_mode: schema
+        verified: "2026-08-06, 970ms"
+      llama-3.3-70b:
+        id: llama-3.3-70b-versatile
+        json_mode: object
+        verified: "2026-08-06, 592ms"
+      llama-3.1-8b:
+        id: llama-3.1-8b-instant
+        json_mode: object
+        verified: "2026-08-06, 220ms"
+      # qwen/qwen3.6-27b is served but rejects both json_schema and json_object
+      # ("Failed to validate JSON"), so it is not usable for router or judge.
+
+  gemini:
+    kind: gemini
+    api_key_env: GEMINI_API_KEY
+    signup_url: https://aistudio.google.com/apikey
+    free_tier: "flash tier only; pro models answer 429 on a free key"
+    # Gemini's response_schema is an OpenAPI-3 subset, NOT full JSON Schema.
+    # `additionalProperties` is rejected outright, so the adapter strips
+    # unsupported keywords before sending. See clients/gemini.py.
+    schema_dialect: openapi_subset
+    models:
+      3.6-flash:
+        id: gemini-3.6-flash
+        json_mode: schema
+        verified: "2026-08-06, 2128ms"
+      3.5-flash:
+        id: gemini-3.5-flash
+        json_mode: schema
+        verified: "2026-08-06, 11997ms - accurate but slow, poor fit for a 50-question eval loop"
+      3.5-flash-lite:
+        id: gemini-3.5-flash-lite
+        json_mode: schema
+        verified: "2026-08-06, 851ms"
+      3.1-flash-lite:
+        id: gemini-3.1-flash-lite
+        json_mode: schema
+        verified: "2026-08-06, 1111ms"
+      # Deliberately NOT registering the moving aliases gemini-flash-latest /
+      # gemini-flash-lite-latest. They work, but an alias that silently
+      # re-points mid-study would invalidate every before/after comparison in
+      # REPORT.md without leaving a trace in the config diff.
+      #
+      # Unavailable on a free key as of 2026-08-06:
+      #   gemini-2.5-flash, gemini-2.5-flash-lite  -> 404 (listed but not served)
+      #   gemini-2.5-pro, gemini-3-pro-preview,
+      #   gemini-2.0-flash*, gemini-pro-latest      -> 429 (paid tier only)
+
+  cerebras:
+    kind: openai_compat
+    base_url: https://api.cerebras.ai/v1
+    api_key_env: CEREBRAS_API_KEY
+    signup_url: https://cloud.cerebras.ai
+    free_tier: "~1M tokens/day, 30 RPM"
+    models:
+      llama-3.3-70b: { id: llama-3.3-70b, json_mode: object, verified: "not tested - no key" }
+      gpt-oss-120b:  { id: gpt-oss-120b,  json_mode: schema, verified: "not tested - no key" }
+
+  openrouter:
+    kind: openai_compat
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    signup_url: https://openrouter.ai/keys
+    free_tier: "20 RPM but only 50 requests/day until you top up $10 - too tight for a full eval run"
+    models:
+      deepseek-v3:   { id: "deepseek/deepseek-chat-v3-0324:free",        json_mode: object, verified: "not tested - no key" }
+      llama-3.3-70b: { id: "meta-llama/llama-3.3-70b-instruct:free",     json_mode: object, verified: "not tested - no key" }
+
+  github:
+    kind: openai_compat
+    base_url: https://models.github.ai/inference
+    api_key_env: GITHUB_MODELS_TOKEN
+    signup_url: https://github.com/settings/tokens
+    free_tier: "low per-minute limits tied to your GitHub account tier"
+    models:
+      gpt-4o-mini:   { id: openai/gpt-4o-mini,            json_mode: schema, verified: "not tested - no key" }
+      llama-3.3-70b: { id: meta/Llama-3.3-70B-Instruct,   json_mode: object, verified: "not tested - no key" }
+
+  # Ollama exposes an OpenAI-compatible endpoint on /v1, so it reuses the same
+  # adapter. No key is needed; the client sends a placeholder token.
+  ollama:
+    kind: openai_compat
+    base_url: http://localhost:11434/v1
+    api_key_env: null
+    signup_url: https://ollama.com/download
+    free_tier: "unlimited, runs on your machine, but ~10-20x slower than a hosted endpoint"
+    models:
+      qwen2.5-7b:  { id: "qwen2.5:7b",  json_mode: none, verified: "not tested - not installed" }
+      llama3.1-8b: { id: "llama3.1:8b", json_mode: none, verified: "not tested - not installed" }
+
+  openai:
+    kind: openai_compat
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    signup_url: https://platform.openai.com/api-keys
+    free_tier: "none - paid only"
+    models:
+      gpt-5-mini:  { id: gpt-5-mini,  json_mode: schema, verified: "not tested - no key" }
+      gpt-4o-mini: { id: gpt-4o-mini, json_mode: schema, verified: "not tested - no key" }

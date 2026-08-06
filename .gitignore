@@ -1,0 +1,53 @@
+# --- Secrets -----------------------------------------------------------------
+.env
+.env.local
+*.key
+
+# --- Private planning notes ---------------------------------------------------
+# The original specification document. Kept out of the repository because it is
+# written for the author rather than a reader of the code, and its closing
+# section is interview preparation. Delete this line to publish it.
+football-tictistat.md
+
+# --- Data --------------------------------------------------------------------
+# Raw StatsBomb JSON is large (~150MB) and fully reproducible via
+# `scripts/01_download_statsbomb.py`, so it is not tracked.
+data/raw/
+
+# Vector indexes and embedding caches are rebuildable artifacts.
+data/index/
+data/cache/
+*.faiss
+*.npy
+
+# Processed tables ARE tracked (small, and they make the repo runnable without
+# re-downloading 150MB). See data/processed/README.md.
+
+# --- Eval artifacts ----------------------------------------------------------
+# Raw per-run logs are noisy; the aggregated results tables are tracked.
+eval/results/raw/
+*.jsonl.gz
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+
+# --- Tooling -----------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
