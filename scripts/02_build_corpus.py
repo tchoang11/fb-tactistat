@@ -1,19 +1,5 @@
 #!/usr/bin/env python
-"""Collect the Wikipedia corpus for the loaded competition.
-
-Requires ``scripts/01_build_dataset.py`` to have run: the page list is derived
-from the teams and players in the event data, not hand-written.
-
-    python scripts/02_build_corpus.py
-    python scripts/02_build_corpus.py --force              # refetch
-    python scripts/02_build_corpus.py --dry-run            # list pages, fetch nothing
-    python scripts/02_build_corpus.py --set wikipedia.min_appearances=6
-
-Takes a couple of minutes and writes a few MB into ``data/processed/wikipedia/``.
-That output *is* committed: it is small, and it lets someone clone the repo and
-run a retrieval evaluation without crawling Wikipedia again -- which also means
-everyone evaluates against the same snapshot.
-"""
+"""Build the competition-scoped Wikipedia corpus from the raw dataset."""
 
 from __future__ import annotations
 

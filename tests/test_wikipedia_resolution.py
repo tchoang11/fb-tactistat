@@ -1,26 +1,4 @@
-"""Tests for Wikipedia entity resolution and the resulting corpus.
-
-Every case in the first half is a bug that actually shipped into a corpus
-during development. Resolution failures are quiet by nature -- a wrong article
-is well written, on-topic, and indistinguishable from a right one once it is
-sitting in the index -- so each one is pinned here rather than left to a code
-comment.
-
-The first crawl produced, among 327 pages:
-
-  "2022 FIFA World Cup Group H"  ->  "2026 FIFA World Cup Group A"
-  "2022 FIFA World Cup Group E"  ->  "2030 FIFA World Cup"
-  "Through ball"                 ->  "2026 FIFA World Cup Group C"
-  "Counter-pressing"             ->  "Jürgen Klopp"
-  "Route One football"           ->  "Route (gridiron football)"
-
-Nothing downstream would have flagged any of them. A question about Group H
-would have been answered, with a citation, from an article about a tournament
-that had not happened when the event data was recorded.
-
-The guard functions are pure, so these tests need no network and no fixtures.
-The corpus tests at the bottom skip when the corpus has not been built.
-"""
+"""Test Wikipedia resolution guards, section splitting, and corpus scope."""
 
 from __future__ import annotations
 
@@ -38,18 +16,11 @@ from tactistat.data.wikipedia import (
     load_corpus,
 )
 
-# --------------------------------------------------------------------------- #
-# Guards                                                                       #
-# --------------------------------------------------------------------------- #
+# Resolution guards
 
 
 class TestYearConflict:
-    """The check that separates the 2022 World Cup from the 2026 one.
-
-    No topical heuristic can catch this substitution: both articles are about
-    football, both are World Cup group pages, both are well written. Only the
-    year distinguishes them.
-    """
+    """Keep different tournament editions separate."""
 
     def test_rejects_a_different_tournament_edition(self):
         assert _years_conflict("2022 FIFA World Cup Group H", "2026 FIFA World Cup Group A")
@@ -59,11 +30,7 @@ class TestYearConflict:
         assert not _years_conflict("2022 FIFA World Cup Group H", "2022 FIFA World Cup Group H")
 
     def test_ignores_a_year_only_the_title_has(self):
-        """A player's article carries their birth year; the query does not.
-
-        Treating that as a conflict would reject "Fred" ->
-        "Fred (footballer, born 1993)", which is the correct resolution.
-        """
+        """A birth year in only the title is not a conflict."""
         assert not _years_conflict("Fred", "Fred (footballer, born 1993)")
         assert not _years_conflict("Antony", "Antony (footballer, born 2000)")
 
@@ -97,13 +64,7 @@ class TestFootballerBio:
         assert _is_footballer_bio({"extract": opening})
 
     def test_accepts_a_double_space_before_player(self):
-        """Regression: this rejected two real USA internationals.
-
-        Stripped wikilinks leave double spaces in the plaintext extract, and
-        both Tim Ream's and Tyler Adams's articles read "American professional
-        soccer  player". A substring match on the single-spaced phrase failed,
-        so the resolver fell through to search and then gave up.
-        """
+        """Normalize whitespace left by stripped wiki markup."""
         assert _is_footballer_bio(
             {
                 "extract": "Timothy Michael Ream (born October 5, 1987) is an American "
@@ -119,10 +80,7 @@ class TestFootballerBio:
 
 class TestContentTokens:
     def test_strips_domain_generic_words(self):
-        """ "football" appears in nearly every page here, so it carries no signal.
-
-        Leaving it in would let any football article satisfy any football query.
-        """
+        """Remove words that carry no resolution signal."""
         assert _content_tokens("Canada national football team") == {"canada"}
 
     def test_concept_queries_keep_their_distinctive_words(self):
@@ -140,9 +98,7 @@ class TestContentTokens:
         assert query <= title
 
 
-# --------------------------------------------------------------------------- #
-# Section splitting                                                            #
-# --------------------------------------------------------------------------- #
+# Section splitting
 
 
 class TestSectionSplitting:
@@ -164,11 +120,7 @@ class TestSectionSplitting:
         assert ("Barcelona", 3) in headings
 
     def test_dropped_sections_take_their_subsections_with_them(self, config):
-        """ "References" owning a "=== Cited works ===" must remove both.
-
-        Reference lists match any query containing a player's name, so a single
-        leaked one can outrank the prose that could actually answer a question.
-        """
+        """Dropping a section also drops its child sections."""
         body = "Body text long enough to clear the minimum section length filter. " * 3
         text = (
             f"Intro. {body}\n== Career ==\n{body}\n"
@@ -186,9 +138,7 @@ class TestSectionSplitting:
         assert [s.heading for s in _split_sections(text, config)] == ["Introduction"]
 
 
-# --------------------------------------------------------------------------- #
-# The built corpus                                                             #
-# --------------------------------------------------------------------------- #
+# Built corpus
 
 
 @pytest.fixture(scope="module")
@@ -206,11 +156,7 @@ def test_corpus_covers_every_entity_type(corpus):
 
 
 def test_no_out_of_scope_tournament_pages(corpus):
-    """The corpus must not contain a World Cup other than the configured one.
-
-    This is the single most damaging contamination available: a page about a
-    different edition answers a question about this one fluently and wrongly.
-    """
+    """Reject tournament pages from other World Cup editions."""
     config = load_config(load_env=False)
     season = str(config["dataset.season_name"])
     intruders = [
@@ -265,12 +211,7 @@ def test_known_players_resolved_to_the_right_article(corpus):
 
 
 def test_north_american_teams_use_their_soccer_titles(corpus):
-    """USA and Canada file under "soccer", not "football".
-
-    "United States national football team" is a disambiguation page pointing at
-    gridiron. Resolving these needs the search fallback, which is what the
-    duplicated-hint bug broke.
-    """
+    """Resolve USA and Canada through their Wikipedia soccer titles."""
     titles = {page.title for page in corpus if page.entity_type == "team"}
     assert "United States men's national soccer team" in titles
     assert "Canada men's national soccer team" in titles

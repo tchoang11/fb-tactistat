@@ -1,17 +1,5 @@
 #!/usr/bin/env python
-"""Download the configured competition from StatsBomb open data.
-
-Run once before anything else:
-
-    python scripts/01_build_dataset.py
-    python scripts/01_build_dataset.py --force        # refetch even if cached
-    python scripts/01_build_dataset.py --set dataset.competition_id=55 \
-                                       --set dataset.season_id=282   # Euro 2024
-
-Takes about a minute on a normal connection and writes ~50 MB of parquet into
-``data/raw/``. That directory is gitignored: it is large and this script
-regenerates it exactly.
-"""
+"""Download the configured StatsBomb competition into ``data/raw/``."""
 
 from __future__ import annotations
 
@@ -39,9 +27,7 @@ def main() -> int:
     config = load_config(args.config, args.overrides)
     build_raw_dataset(config, force=args.force)
 
-    # Sanity summary. A silent success on a dataset build is not reassuring --
-    # print enough that an obviously wrong competition or a truncated download
-    # is visible immediately rather than three steps later.
+    # Print enough metadata to spot a wrong or incomplete dataset.
     matches = load_matches(config)
     print()
     print(f"{config['dataset.competition_name']} {config['dataset.season_name']}")

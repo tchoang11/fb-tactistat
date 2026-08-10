@@ -4,14 +4,10 @@
 *.key
 
 # --- Private planning notes ---------------------------------------------------
-# The original specification document. Kept out of the repository because it is
-# written for the author rather than a reader of the code, and its closing
-# section is interview preparation. Delete this line to publish it.
 football-tictistat.md
 
 # --- Data --------------------------------------------------------------------
-# Raw StatsBomb JSON is large (~150MB) and fully reproducible via
-# `scripts/01_download_statsbomb.py`, so it is not tracked.
+# Raw data is large and reproducible.
 data/raw/
 
 # Vector indexes and embedding caches are rebuildable artifacts.
@@ -20,11 +16,10 @@ data/cache/
 *.faiss
 *.npy
 
-# Processed tables ARE tracked (small, and they make the repo runnable without
-# re-downloading 150MB). See data/processed/README.md.
+# Processed tables are tracked; see data/processed/README.md.
 
 # --- Eval artifacts ----------------------------------------------------------
-# Raw per-run logs are noisy; the aggregated results tables are tracked.
+# Ignore raw run logs; track aggregated results.
 eval/results/raw/
 *.jsonl.gz
 

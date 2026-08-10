@@ -1,32 +1,4 @@
-"""Collect the Wikipedia half of the corpus, scoped to the loaded competition.
-
-Two problems this module exists to solve.
-
-**Scope.** Section 4.2 of the spec says to stay inside the chosen competition.
-Rather than trust a hand-maintained page list to stay in sync, the entity list
-is *derived from the event data*: teams that played, players who appeared often
-enough to matter, plus the tournament's own pages and a curated set of tactical
-concepts. Change the competition in the config and the corpus follows.
-
-**Names.** StatsBomb records legal names; Wikipedia uses common names.
-
-    Lionel Andrés Messi Cuccittini   ->  Lionel Messi
-    Kylian Mbappé Lottin             ->  Kylian Mbappé
-    Abdul Rahman Baba                ->  Baba Rahman
-
-There is no rule that maps one to the other, so each name is resolved against
-the live API and every resolution is logged. A wrong resolution is worse than a
-missing page: silently indexing the wrong Wikipedia article gives the retriever
-plausible text about the wrong person, and the synthesis step will cite it
-confidently. Hence the football check in ``_looks_like_football_page`` and the
-audit trail in ``resolution_log.json``.
-
-Output (``data/processed/wikipedia/``, committed to git -- it is small and it
-makes the repo runnable without a crawl):
-
-    corpus.jsonl          one JSON record per page, sections preserved
-    resolution_log.json   every query, what it resolved to, and what failed
-"""
+"""Build a competition-scoped Wikipedia corpus and log entity resolutions."""
 
 from __future__ import annotations
 
@@ -51,23 +23,10 @@ from tactistat.data.statsbomb import load_events, load_lineups, load_matches
 CORPUS_FILE = "corpus.jsonl"
 RESOLUTION_LOG_FILE = "resolution_log.json"
 
-# Wikipedia text is CC BY-SA 4.0. Recorded on every page so the synthesis step
-# can attribute correctly and the repo stays license-clean.
+# Stored on each page for attribution.
 LICENSE = "CC BY-SA 4.0"
 
-# Football concepts a TACTICAL question is likely to lean on.
-#
-# These are real article titles, not invented phrases. The first version of this
-# list contained descriptive queries such as "Park the bus football" and
-# "Overlapping run football", which have no article; every one of them fell
-# through to search and came back with something unrelated -- "Through ball"
-# resolved to "2026 FIFA World Cup Group C". Wikipedia's redirect graph handles
-# the aliases we actually need (Gegenpressing -> Association football tactics),
-# so a title that exists beats a phrase that reads well.
-#
-# Several entries deliberately collapse onto the same article: "Midfielder"
-# covers both attacking and defensive roles. The corpus builder de-duplicates by
-# page ID and reports how many collapsed.
+# Real Wikipedia titles for tactical retrieval; duplicate pages are removed later.
 TACTICAL_CONCEPTS = [
     # Shape and system
     "Formation (association football)",
@@ -86,9 +45,7 @@ TACTICAL_CONCEPTS = [
     "Forward (association football)",
     "Winger (association football)",
     "Captain (association football)",
-    # "Wingback" is deliberately absent: that article is the American-football
-    # position, and the association-football wing-back redirects to
-    # "Defender (association football)", which is already listed above.
+    # "Wingback" points to an American-football article.
     # On-ball actions
     "Dribbling",
     "Cross (association football)",
@@ -148,9 +105,7 @@ class WikiPage:
         return json.dumps(asdict(self), ensure_ascii=False)
 
 
-# --------------------------------------------------------------------------- #
-# Choosing what to fetch                                                       #
-# --------------------------------------------------------------------------- #
+# Select pages
 
 
 def _played_positions(cell: Any) -> list[dict]:
@@ -167,11 +122,7 @@ def _played_positions(cell: Any) -> list[dict]:
 
 
 def select_players(config: Config) -> pd.DataFrame:
-    """Players worth a Wikipedia page, with their common name where known.
-
-    Returns columns ``player_name`` (StatsBomb legal name), ``search_name``
-    (what to look up), ``team``, ``apps``, ``goals``.
-    """
+    """Select notable players and their Wikipedia search names."""
     lineups = load_lineups(config)
     events = load_events(config)
 
@@ -189,7 +140,7 @@ def select_players(config: Config) -> pd.DataFrame:
         .reset_index()
     )
 
-    # Shootout kicks are period 5 and are not goals; see tests/test_data_integrity.py.
+    # Period 5 contains shootout kicks.
     goals = (
         events[
             (events["type"] == "Shot")
@@ -208,8 +159,7 @@ def select_players(config: Config) -> pd.DataFrame:
         keep |= per_player["goals"] > 0
 
     selected = per_player[keep].copy()
-    # StatsBomb's nickname is the common name when it has one; otherwise the
-    # legal name usually already is the common name ("Aaron Ramsey").
+    # Prefer the common nickname for Wikipedia search.
     selected["search_name"] = selected["nickname"].fillna(selected["player_name"])
     return selected.sort_values(["goals", "apps"], ascending=False).reset_index(drop=True)
 
@@ -240,28 +190,19 @@ def build_page_specs(config: Config) -> list[PageSpec]:
     return specs
 
 
-# --------------------------------------------------------------------------- #
-# Fetching                                                                     #
-# --------------------------------------------------------------------------- #
+# Fetching
 
 HEADING_RE = re.compile(r"^(={2,6})\s*(.+?)\s*\1\s*$")
 
 
 def _split_sections(extract: str, config: Config) -> list[Section]:
-    """Turn a plaintext extract into sections, dropping navigational ones.
-
-    The API returns headings as wiki markup (``== Club career ==``), so the
-    structure survives the conversion to plain text. Splitting on it keeps the
-    baseline chunking strategy (Section 5.3) honest: a chunk is a real section
-    of the article, not an arbitrary token window.
-    """
+    """Split plaintext on wiki headings and drop navigational sections."""
     drop = {name.lower() for name in config["wikipedia.drop_sections"]}
     min_chars = config["wikipedia.min_section_chars"]
 
     sections: list[Section] = []
     heading, level, buffer = "Introduction", 0, []
-    # A dropped top-level section takes its subsections with it: "References"
-    # owns any "=== Cited works ===" beneath it.
+    # Dropping a level-2 section also drops its children.
     dropping = False
 
     def flush() -> None:
@@ -281,7 +222,7 @@ def _split_sections(extract: str, config: Config) -> list[Section]:
         if level == 2:
             dropping = heading.lower() in drop
         elif dropping:
-            # Still inside a dropped top-level section.
+            # Remain inside the dropped parent section.
             pass
     flush()
     return sections
@@ -291,9 +232,7 @@ def _is_disambiguation(extract: str) -> bool:
     return "may refer to" in extract[:300].lower()
 
 
-# Codes of football that are not association football. A page about one of them
-# is never a valid resolution here: "Route One football" resolved to
-# "Route (gridiron football)" on the first crawl.
+# Other football codes are invalid resolutions.
 OTHER_FOOTBALL_CODES = (
     "gridiron",
     "american football",
@@ -302,9 +241,7 @@ OTHER_FOOTBALL_CODES = (
     "gaelic football",
 )
 
-# Words too common in this domain to carry signal when comparing a query
-# against a resolved title. "football" appears in nearly every page here, so
-# matching on it would let any football page satisfy any football query.
+# Domain-generic words do not help compare a query with a title.
 _GENERIC_TOKENS = {
     "football",
     "footballer",
@@ -343,42 +280,20 @@ def _is_other_football_code(page: dict[str, Any]) -> bool:
 
 
 def _years_conflict(query: str, title: str) -> bool:
-    """True when query and title both name years and none of them agree.
-
-    This is the check that catches the worst class of failure seen on the first
-    crawl: "2022 FIFA World Cup Group H" resolving to "2026 FIFA World Cup
-    Group A". Both pages are about football, both are World Cup group pages,
-    and every topical heuristic accepts the swap -- only the year exposes it.
-    """
+    """Return whether query and title contain conflicting years."""
     query_years = set(_YEAR_RE.findall(query))
     title_years = set(_YEAR_RE.findall(title))
     return bool(query_years and title_years and not (query_years & title_years))
 
 
 def _is_footballer_bio(page: dict[str, Any]) -> bool:
-    """Wikipedia opens player biographies with a standard phrase.
-
-    "... is an Argentine professional footballer who plays as ..." -- checking
-    the opening sentence separates a player from a politician or musician who
-    happens to share the name.
-
-    Whitespace is collapsed first. Stripped wikilinks and templates leave double
-    spaces in the plaintext extract, and the US players' articles happen to read
-    "American professional soccer  player" -- a substring match on the
-    single-spaced phrase rejected both Tim Ream and Tyler Adams.
-    """
+    """Detect a footballer biography from its normalized opening text."""
     opening = re.sub(r"\s+", " ", page["extract"][:400]).lower()
     return any(phrase in opening for phrase in ("footballer", "football player", "soccer player"))
 
 
 class _RateLimiter:
-    """Enforce a global request rate across every worker thread.
-
-    Sleeping inside each thread bounds that thread's rate, not the process's:
-    N workers each pausing 0.1s still burst at 10N requests/second. The limiter
-    serialises the decision of *when* the next request may leave, so the cap
-    holds no matter how many workers are running.
-    """
+    """Enforce one request rate across all worker threads."""
 
     def __init__(self, requests_per_second: float):
         self._min_interval = 1.0 / requests_per_second if requests_per_second > 0 else 0.0
@@ -425,7 +340,7 @@ class WikipediaClient:
                 continue
 
             if response.status_code in self.RETRY_STATUS:
-                # The server knows better than any local guess how long to wait.
+                # Prefer the server-provided delay.
                 retry_after = response.headers.get("Retry-After")
                 delay = float(retry_after) if retry_after and retry_after.isdigit() else 2**attempt
                 last_error = requests.HTTPError(f"HTTP {response.status_code}", response=response)
@@ -435,8 +350,7 @@ class WikipediaClient:
             response.raise_for_status()
             payload = response.json()
 
-            # maxlag rejections arrive as HTTP 200 with an error body, so a
-            # status-code-only check would treat them as valid empty results.
+            # MediaWiki reports maxlag inside an HTTP 200 body.
             error = payload.get("error", {})
             if error.get("code") == "maxlag":
                 last_error = requests.HTTPError(f"maxlag: {error.get('info', '')}")
@@ -480,22 +394,11 @@ class WikipediaClient:
         )
         return [hit["title"] for hit in data.get("query", {}).get("search", [])]
 
-    # Search fallback needs a disambiguating hint. Searching the bare string
-    # "Fred" returns Fred Trump and Fred Astaire; "Fred footballer" returns
-    # "Fred (footballer, born 1993)" as the first hit.
+    # Search hints disambiguate short names and broad concepts.
     SEARCH_HINT = {"player": "footballer", "team": "national football team", "concept": "football"}
 
     def _accept(self, spec: PageSpec, page: dict[str, Any], via_search: bool) -> tuple[bool, str]:
-        """Decide whether ``page`` is a valid resolution of ``spec``.
-
-        Direct hits and search hits are held to different standards on purpose.
-        A direct hit means Wikipedia's own title resolution -- including its
-        redirect graph -- pointed here, which is far better evidence than any
-        local heuristic; "Gegenpressing" redirecting to "Association football
-        tactics" is a correct answer that a strict title comparison would
-        reject. A search hit is a guess by a relevance ranker that knows
-        nothing about this competition, so it has to earn acceptance.
-        """
+        """Validate a direct or search-based page resolution."""
         title, extract = page["title"], page["extract"]
 
         if _is_disambiguation(extract):
@@ -505,8 +408,7 @@ class WikipediaClient:
         if _years_conflict(spec.query, title):
             return False, f"year mismatch: {title}"
 
-        # Player identity is the one thing a topical check can verify cheaply,
-        # and getting it wrong means confidently citing the wrong person.
+        # Player pages must look like footballer biographies.
         if spec.entity_type == "player" and not _is_footballer_bio(page):
             return False, f"not a footballer biography: {title}"
 
@@ -517,17 +419,11 @@ class WikipediaClient:
         title_tokens = _content_tokens(title)
 
         if spec.entity_type == "concept":
-            # A concept article is named after the concept. Requiring every
-            # distinctive query token in the title rejects "Through ball" ->
-            # "2026 FIFA World Cup Group C" and "Counter-pressing" ->
-            # "Jürgen Klopp", while still accepting "Set piece (association
-            # football)" -> "Set piece (football)".
+            # Concept titles must contain every distinctive query token.
             if not query_tokens <= title_tokens:
                 return False, f"title does not name the concept: {title}"
         elif not (query_tokens & title_tokens):
-            # People and teams tolerate looser matching: transliteration varies
-            # ("Cho Kyu-Sung" -> "Cho Gue-sung"), so demanding every token
-            # would reject correct resolutions.
+            # People and team names allow partial overlap for transliteration.
             return False, f"no token overlap: {title}"
 
         return True, f"search -> {title}"
@@ -543,19 +439,11 @@ class WikipediaClient:
                 return page, reason
             rejections.append(f"direct({reason})")
 
-        # Tournament titles are exact and predictable -- "2022 FIFA World Cup
-        # Group H" either exists under that name or does not. Searching for a
-        # near-miss is how the first crawl ended up indexing the 2026 and 2030
-        # tournaments, so there is no fallback here: an unresolved page is a
-        # visible gap, a wrong page is a silent one.
+        # Do not search-fallback tournament pages across editions.
         if spec.entity_type == "tournament":
             return None, "; ".join(rejections) or "no such page"
 
-        # Append the hint only when it is not already in the query. Team specs
-        # are built as "<team> national football team", and blindly appending
-        # the team hint produced "Canada national football team national
-        # football team", whose top hits were Cape Verde and Ivory Coast. The
-        # un-doubled query returns "Canada men's national soccer team" first.
+        # Avoid appending a search hint already present in the query.
         hint = self.SEARCH_HINT.get(spec.entity_type, "")
         query = spec.query if hint.lower() in spec.query.lower() else f"{spec.query} {hint}".strip()
         for candidate in self.search(query):
@@ -570,9 +458,7 @@ class WikipediaClient:
         return None, "; ".join(rejections[:4]) or "no candidates"
 
 
-# --------------------------------------------------------------------------- #
-# Building the corpus                                                          #
-# --------------------------------------------------------------------------- #
+# Build corpus
 
 
 def _fetch_one(
@@ -660,9 +546,7 @@ def build_corpus(config: Config, force: bool = False) -> Path:
             if page is not None:
                 pages.append(page)
 
-    # Two different queries can resolve to the same article -- a player's search
-    # name and a redirect, say. Indexing it twice would let one page occupy
-    # several slots in a top-k result and crowd out genuine alternatives.
+    # Keep one copy of each Wikipedia page ID.
     seen: set[int] = set()
     unique: list[WikiPage] = []
     duplicates = 0

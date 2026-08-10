@@ -7,9 +7,9 @@ and both when a question needs both.
 Built on the 2022 FIFA World Cup — 64 matches of StatsBomb event data and 318
 Wikipedia articles scoped to the teams, players, and concepts that appear in it.
 
-> **Status: in progress.** Data layer and evaluation scaffolding are complete
-> (Days 1–2 of the plan). The stats tool, retrieval, router, synthesis, and the
-> evaluation study are being built next — see [Roadmap](#roadmap).
+> **Status: in progress.** The data layer and the stats tool are complete and
+> tested. Retrieval, router, synthesis, and the evaluation study are being
+> built next — see [Roadmap](#roadmap).
 
 ---
 
@@ -76,11 +76,14 @@ python scripts/01_build_dataset.py
 pytest tests/ -q
 ```
 
-The Wikipedia corpus is **committed to the repository**, so there is no need to
-crawl it. To rebuild it anyway (~90 s):
+The Wikipedia corpus and the aggregated stats tables are **committed to the
+repository**, so neither the crawl nor the aggregation is required. To rebuild
+them anyway:
 
 ```bash
-python scripts/02_build_corpus.py --force
+python scripts/02_build_corpus.py --force   # ~90 s
+python scripts/03_build_stats.py            # ~10 s
+python scripts/03_build_stats.py --check    # minutes reconciliation only
 ```
 
 ### API keys
@@ -112,9 +115,14 @@ registered in [`configs/models.yaml`](configs/models.yaml).
 ## Choosing models
 
 Every model is addressed as `provider:alias` and resolved through
-[`configs/models.yaml`](configs/models.yaml). Six of the seven providers speak
-the OpenAI-compatible wire format and therefore share one client adapter; only
-Gemini needs its own. Adding a provider is a YAML edit.
+[`configs/models.yaml`](configs/models.yaml) into a LangChain chat model, so
+adding a provider is a YAML edit. The registry carries a **measured**
+`json_mode` per model rather than an assumed one, and the router asks for that
+decoding mode explicitly: on Groq, only the `gpt-oss` family accepts strict
+`json_schema`, while the Llama checkpoints reject it with HTTP 400 and honour
+`json_object`. Letting the framework pick silently would turn "an invalid
+label is impossible" into "an invalid label is unlikely" — a difference that
+surfaces in the evaluation numbers rather than as an exception.
 
 Each role can point at a different model, and any of them can be overridden per
 run:
@@ -148,7 +156,11 @@ src/tactistat/
   data/
     statsbomb.py      fetch and cache event data
     wikipedia.py      scope, resolve, and fetch the text corpus
-  stats_tool/         aggregation and per-90 normalisation      (next)
+  stats_tool/
+    minutes.py        minutes played, reconstructed from the event stream
+    aggregate.py      per-player tables and per-90 normalisation
+    query.py          slots from the router -> number + supporting matches
+    langchain_tool.py the same engine, bound as a structured tool
   rag_tool/           chunking, embedding, retrieval, reranking (next)
   router/             question classification                   (next)
   synthesis/          answer generation with citations          (next)
@@ -156,8 +168,9 @@ src/tactistat/
 scripts/
   01_build_dataset.py StatsBomb download
   02_build_corpus.py  Wikipedia crawl
+  03_build_stats.py   aggregation + minutes reconciliation
   probe_models.py     verify the model registry against live endpoints
-tests/                data integrity and resolution regressions
+tests/                data integrity, resolution, and stats regressions
 ```
 
 Configuration drives behaviour: an experiment is a config diff, not a code
@@ -190,6 +203,37 @@ ordinary `Shot` events in `period == 5`. Counting them inflates the tournament
 total from 172 to 195 and invents scorers, while every table still looks
 normal. `tests/test_data_integrity.py` pins this.
 
+### Minutes played, and why they are not read off the lineups
+
+Every per-90 rate divides by minutes played, so the denominator decides the
+answer. Two things make it harder than it looks.
+
+StatsBomb's clock runs through stoppage time — the first half of Iran v United
+States ends at 52:04 — and periods therefore *overlap*, because period 2 starts
+at 45:00 while period 1 is still running. Raw subtraction across a period
+boundary is meaningless, and crediting stoppage time would make a player's
+denominator depend on how long the referee added. Each reading is clipped to
+its period's nominal end instead, so a full match is 90 minutes and a full
+extra-time match is 120.
+
+The lineup `positions` field is the obvious source and is wrong often enough
+to matter: reconstructing from it puts *twelve* Iran players on the pitch
+simultaneously and disagrees with the substitution record in six matches, by up
+to 87 player-minutes. Minutes are therefore rebuilt from the event stream —
+`Starting XI`, `Substitution`, `Player Off`/`Player On`, red cards — which
+reconciles cleanly:
+
+| Check | Result |
+| --- | --- |
+| Matches over-counting minutes (impossible if correct) | 0 / 64 |
+| Largest shortfall (dismissals, off-pitch spells) | 8.15 min |
+| Messi's minutes vs. 5×90 + 2×120 | 689.9 ≈ 690 |
+| Goals surviving aggregation vs. official record | 169 + 3 own goals = 172 |
+
+The identity behind the first row is simply that eleven players a side are on
+the pitch at all times, so a match must account for `22 ×` its nominal length.
+It may fall short; it can never exceed. `tests/test_stats_tool.py` pins it.
+
 ### Wikipedia — 318 articles, 4,290 sections
 
 Scope is derived from the event data rather than hand-maintained: the 32
@@ -216,9 +260,9 @@ with every record for attribution.
 
 - [x] Data layer: StatsBomb ingestion, Wikipedia corpus, integrity tests
 - [x] Model registry across seven providers, verified against live endpoints
-- [ ] Stats tool: aggregation, per-90 normalisation, query interface
+- [x] Stats tool: minutes, aggregation, per-90 normalisation, query interface
 - [ ] RAG tool: section chunking, embeddings, BM25, hybrid retrieval, reranking
-- [ ] Router and synthesis; end-to-end pipeline
+- [ ] Router and synthesis; LangGraph pipeline
 - [ ] Evaluation set: 40–50 questions with ground truth
 - [ ] Baseline and ablation study (chunking, embedding model, retrieval, rerank)
 - [ ] Bootstrap confidence intervals for player comparisons

@@ -1,36 +1,7 @@
-# Model registry
-# ==============
-# Every model in TactiStat is addressed as "<provider>:<alias>", e.g.
-# "groq:llama-3.3-70b". This file is the single place that maps such a handle
-# onto a concrete endpoint, so adding a provider never requires touching Python.
-#
-# `kind` selects the client adapter:
-#   openai_compat -> src/tactistat/llm/clients/openai_compat.py
-#   gemini        -> src/tactistat/llm/clients/gemini.py
-#
-# Most providers below are OpenAI-compatible and therefore share one adapter;
-# they differ only in `base_url` and which environment variable holds the key.
-#
-# ---------------------------------------------------------------------------
-# `json_mode` -- how hard the endpoint can constrain output. Router and judge
-# both need machine-readable output, and support is uneven even *within* one
-# provider, so the adapter degrades along this ladder:
-#
-#   schema : native JSON-Schema-constrained decoding. Output is guaranteed to
-#            match, so no retry loop is needed.
-#   object : "valid JSON, shape unspecified". The adapter injects the schema
-#            into the prompt and validates client-side, retrying on mismatch.
-#   none   : free text. The adapter extracts the first JSON object it finds.
-#
-# Do not trust this field blindly -- providers change it silently. Re-measure:
-#
-#     python scripts/probe_models.py
-#
-# `verified` records when a model was last confirmed working end-to-end and how
-# long one small structured call took. A model absent from a provider's live
-# list, or answering 404/429 on the free tier, is commented out rather than
-# deleted, so the next person knows it was considered and why it is not used.
-# ---------------------------------------------------------------------------
+# Models use "<provider>:<alias>" handles.
+# `kind` selects the OpenAI-compatible or Gemini adapter.
+# `json_mode`: schema = constrained, object = valid JSON, none = free text.
+# Recheck support with `python scripts/probe_models.py`.
 
 providers:
 
@@ -41,8 +12,7 @@ providers:
     signup_url: https://console.groq.com/keys
     free_tier: "~30 RPM, ~1k requests/day per model, no credit card"
     models:
-      # Only the gpt-oss family accepts strict json_schema on Groq today.
-      # The Llama models reject it with HTTP 400 but honour json_object.
+      # Groq gpt-oss supports schema; Llama supports object mode.
       gpt-oss-120b:
         id: openai/gpt-oss-120b
         json_mode: schema
@@ -59,17 +29,14 @@ providers:
         id: llama-3.1-8b-instant
         json_mode: object
         verified: "2026-08-06, 220ms"
-      # qwen/qwen3.6-27b is served but rejects both json_schema and json_object
-      # ("Failed to validate JSON"), so it is not usable for router or judge.
+      # qwen3.6-27b rejects both structured JSON modes.
 
   gemini:
     kind: gemini
     api_key_env: GEMINI_API_KEY
     signup_url: https://aistudio.google.com/apikey
     free_tier: "flash tier only; pro models answer 429 on a free key"
-    # Gemini's response_schema is an OpenAPI-3 subset, NOT full JSON Schema.
-    # `additionalProperties` is rejected outright, so the adapter strips
-    # unsupported keywords before sending. See clients/gemini.py.
+    # Gemini accepts an OpenAPI subset, not full JSON Schema.
     schema_dialect: openapi_subset
     models:
       3.6-flash:
@@ -88,15 +55,7 @@ providers:
         id: gemini-3.1-flash-lite
         json_mode: schema
         verified: "2026-08-06, 1111ms"
-      # Deliberately NOT registering the moving aliases gemini-flash-latest /
-      # gemini-flash-lite-latest. They work, but an alias that silently
-      # re-points mid-study would invalidate every before/after comparison in
-      # REPORT.md without leaving a trace in the config diff.
-      #
-      # Unavailable on a free key as of 2026-08-06:
-      #   gemini-2.5-flash, gemini-2.5-flash-lite  -> 404 (listed but not served)
-      #   gemini-2.5-pro, gemini-3-pro-preview,
-      #   gemini-2.0-flash*, gemini-pro-latest      -> 429 (paid tier only)
+      # Skip moving aliases and models unavailable to the free key.
 
   cerebras:
     kind: openai_compat
@@ -128,8 +87,7 @@ providers:
       gpt-4o-mini:   { id: openai/gpt-4o-mini,            json_mode: schema, verified: "not tested - no key" }
       llama-3.3-70b: { id: meta/Llama-3.3-70B-Instruct,   json_mode: object, verified: "not tested - no key" }
 
-  # Ollama exposes an OpenAI-compatible endpoint on /v1, so it reuses the same
-  # adapter. No key is needed; the client sends a placeholder token.
+  # Ollama reuses the OpenAI-compatible adapter without a real key.
   ollama:
     kind: openai_compat
     base_url: http://localhost:11434/v1

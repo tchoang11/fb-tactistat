@@ -19,14 +19,22 @@ dependencies = [
     "pyarrow>=15",              # parquet writer for processed tables
     "requests>=2.32",           # Wikipedia REST API
 
+    # --- Orchestration ------------------------------------------------------
+    # LangChain tools/model adapters and the LangGraph pipeline.
+    "langchain>=1.0",
+    "langgraph>=1.0",
+    "langchain-community>=0.4",   # BM25Retriever, cross-encoder reranker
+    "langchain-groq>=1.0",
+    "langchain-google-genai>=4.0",
+    "langchain-huggingface>=1.0",
+
     # --- Retrieval ----------------------------------------------------------
     "sentence-transformers>=3.0",
     "faiss-cpu>=1.8",
     "rank-bm25>=0.2.2",
 
     # --- LLM providers ------------------------------------------------------
-    # `openai` is the client for EVERY OpenAI-compatible endpoint: Groq,
-    # Cerebras, OpenRouter, GitHub Models, Ollama, vLLM, OpenAI itself.
+    # Raw clients are also used by scripts/probe_models.py.
     "openai>=1.50",
     "google-genai>=1.0",        # Gemini speaks its own wire format
 

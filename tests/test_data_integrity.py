@@ -1,21 +1,4 @@
-"""Golden tests pinning the raw dataset against externally known facts.
-
-Every number downstream -- per-90 rates, the numeric-accuracy metric, the
-bootstrap confidence intervals -- inherits whatever the event table says. A
-loading bug does not announce itself: it produces a table that is the right
-shape, full of plausible numbers, and quietly wrong. The evaluation harness
-cannot catch that, because it grades the system against ground truth derived
-from this same table.
-
-So the dataset is checked against facts sourced from outside it: the official
-World Cup 2022 goal total, the official top scorers, and the scoreboard
-recorded on each match row.
-
-The shootout case is the one that actually bit during development. StatsBomb
-records penalty-shootout kicks as ordinary ``Shot`` events in ``period == 5``.
-Counting them inflates the tournament total from 172 to 195 and turns several
-players into phantom scorers -- while every table still looks entirely normal.
-"""
+"""Check raw StatsBomb data against official tournament facts."""
 
 from __future__ import annotations
 
@@ -29,7 +12,7 @@ from tactistat.data.statsbomb import (
     load_matches,
 )
 
-# Sourced from FIFA's official tournament report, not from the event data.
+# External FIFA reference values.
 OFFICIAL_TOTAL_GOALS = 172
 OFFICIAL_TOP_SCORERS = {
     "Kylian Mbappé Lottin": 8,  # Golden Boot
@@ -40,8 +23,7 @@ OFFICIAL_TOP_SCORERS = {
 N_MATCHES = 64
 N_TEAMS = 32
 
-# Regulation and extra time occupy periods 1-4. Period 5 is the shootout, which
-# does not count towards a player's goal tally or the tournament total.
+# Period 5 is the shootout and does not count toward goal totals.
 IN_PLAY_PERIODS = 4
 
 
@@ -76,9 +58,7 @@ def in_play_goals(events):
     ]
 
 
-# --------------------------------------------------------------------------- #
-# Shape                                                                        #
-# --------------------------------------------------------------------------- #
+# Dataset shape
 
 
 def test_match_count(matches):
@@ -91,11 +71,7 @@ def test_all_teams_present(matches):
 
 
 def test_every_match_has_two_starting_elevens(events):
-    """128 Starting XI events, one per team per match.
-
-    A missing one means a match failed to download and was concatenated in
-    silently -- which would skew every per-90 rate for that squad.
-    """
+    """Each match has one Starting XI event per team."""
     assert (events["type"] == "Starting XI").sum() == N_MATCHES * 2
 
 
@@ -104,9 +80,7 @@ def test_extra_time_is_present(events):
     assert events["minute"].max() >= 120
 
 
-# --------------------------------------------------------------------------- #
-# Goals: the numbers everything else is graded against                         #
-# --------------------------------------------------------------------------- #
+# Goal totals
 
 
 def test_tournament_goal_total_matches_official_record(events, in_play_goals):
@@ -116,12 +90,7 @@ def test_tournament_goal_total_matches_official_record(events, in_play_goals):
 
 
 def test_shootout_goals_are_excluded(events, in_play_goals):
-    """The shootout kicks exist in the data and are deliberately not counted.
-
-    Asserting the gap is non-zero keeps this test honest: if StatsBomb ever
-    stopped emitting period-5 shots, an equality-only check would still pass
-    while quietly testing nothing.
-    """
+    """Confirm shootout goals exist but stay outside in-play totals."""
     all_shot_goals = ((events["type"] == "Shot") & (events["shot_outcome"] == "Goal")).sum()
     assert all_shot_goals > len(in_play_goals), "no period-5 shots found; filter may be dead"
 
@@ -136,12 +105,7 @@ def test_top_scorers_match_official_record(in_play_goals):
 
 
 def test_goals_reconcile_with_every_scoreboard(matches, events, in_play_goals):
-    """Per-team goal counts must equal the score on the match row, 128/128 times.
-
-    This is the strongest available check: it cross-validates the event stream
-    against an independent field in the same dataset, for every team in every
-    match, and it is what catches an own-goal attribution error.
-    """
+    """Reconcile each team's event goals with the match scoreboard."""
     scored = in_play_goals.groupby(["match_id", "team"]).size()
     own_goals = events[events["type"] == "Own Goal Against"].groupby(["match_id", "team"]).size()
 
@@ -150,8 +114,7 @@ def test_goals_reconcile_with_every_scoreboard(matches, events, in_play_goals):
         for side, opponent in (("home", "away"), ("away", "home")):
             team = match[f"{side}_team"]
             key = (match["match_id"], team)
-            # StatsBomb charges an own goal to the team that conceded it, so it
-            # credits the opponent's score.
+            # Credit an own goal to the opponent's score.
             conceded = own_goals.get((match["match_id"], match[f"{opponent}_team"]), 0)
             total = scored.get(key, 0) + conceded
             if total != match[f"{side}_score"]:
@@ -162,17 +125,11 @@ def test_goals_reconcile_with_every_scoreboard(matches, events, in_play_goals):
     assert not mismatches, "goal reconciliation failed:\n" + "\n".join(mismatches)
 
 
-# --------------------------------------------------------------------------- #
-# Metric coverage                                                              #
-# --------------------------------------------------------------------------- #
+# Metric coverage
 
 
 def test_every_shot_has_an_xg_value(events):
-    """xG underpins the STAT half of the system; partial coverage would bias it.
-
-    A shot without xG silently contributes 0 to a player's total, making
-    low-volume shooters look more wasteful than they were.
-    """
+    """Every shot must have xG to avoid biased totals."""
     shots = events[events["type"] == "Shot"]
     assert len(shots) > 0
     assert shots["shot_statsbomb_xg"].notna().all()

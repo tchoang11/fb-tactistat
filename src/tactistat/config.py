@@ -1,15 +1,4 @@
-"""Configuration loading for TactiStat.
-
-Three sources feed into a run, in increasing order of precedence:
-
-1. ``configs/default.yaml``  - the baseline system definition
-2. an optional experiment config passed with ``--config``
-3. ``--set key.path=value`` overrides from the command line
-
-Keeping all three in one place is what makes the ablation study in Section 6.3
-tractable: an experiment is a config diff, not a code branch, so a result can
-always be traced back to the exact settings that produced it.
-"""
+"""Load baseline, experiment, and CLI configuration in precedence order."""
 
 from __future__ import annotations
 
@@ -22,7 +11,7 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-# src/tactistat/config.py -> src/tactistat -> src -> <repo root>
+# Three parents up from this file.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 CONFIGS_DIR = PROJECT_ROOT / "configs"
@@ -38,26 +27,14 @@ class ConfigError(Exception):
 
 @dataclass
 class Config:
-    """A nested config tree with dotted-path access.
-
-    ``Config`` deliberately does not validate against a schema. The consumers
-    (router, stats tool, RAG tool) each read the handful of keys they care
-    about and fail loudly on a missing one, which keeps the config format open
-    for experiments without a central registry of every knob.
-    """
+    """A nested config tree with dotted-path access and no central schema."""
 
     _data: dict[str, Any] = field(default_factory=dict)
 
-    # -- reading ---------------------------------------------------------------
+    # Reading
 
     def get(self, path: str, default: Any = _MISSING) -> Any:
-        """Read ``a.b.c`` from the tree.
-
-        Raises ``ConfigError`` when the path is absent and no default is given,
-        rather than returning ``None``. A typo in a config key should stop the
-        run, not silently disable a feature and quietly change the numbers in
-        the report.
-        """
+        """Read ``a.b.c``; raise when missing unless a default is supplied."""
         node: Any = self._data
         for part in path.split("."):
             if not isinstance(node, dict) or part not in node:
@@ -77,7 +54,7 @@ class Config:
             raise ConfigError(f"Config key {path!r} is not a section (got {type(value).__name__})")
         return value
 
-    # -- writing ---------------------------------------------------------------
+    # Writing
 
     def set(self, path: str, value: Any) -> None:
         """Write ``a.b.c``, creating intermediate dicts as needed."""
@@ -92,26 +69,17 @@ class Config:
         node[parts[-1]] = value
 
     def apply_overrides(self, overrides: list[str] | None) -> None:
-        """Apply ``key.path=value`` strings from the command line.
-
-        Values are parsed as YAML scalars, so ``top_k=10`` becomes an int,
-        ``rerank.enabled=true`` a bool, and ``labels=[A,B]`` a list -- without
-        a hand-rolled type coercion ladder.
-        """
+        """Apply ``key.path=value`` strings, parsing values as YAML."""
         for item in overrides or []:
             if "=" not in item:
                 raise ConfigError(f"Override {item!r} is not of the form key.path=value")
             path, raw = item.split("=", 1)
             self.set(path.strip(), yaml.safe_load(raw))
 
-    # -- paths -----------------------------------------------------------------
+    # Paths
 
     def path(self, key: str) -> Path:
-        """Read a config value as a filesystem path, anchored at the repo root.
-
-        Config files store repo-relative paths so a checkout works from any
-        working directory and the values stay readable in a diff.
-        """
+        """Resolve a config path relative to the repository root."""
         value = self.get(key)
         candidate = Path(value).expanduser()
         return candidate if candidate.is_absolute() else PROJECT_ROOT / candidate
@@ -122,12 +90,7 @@ class Config:
 
 
 def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge ``patch`` into a copy of ``base``.
-
-    Nested dicts merge key-by-key; every other type (including lists) is
-    replaced wholesale. That means an experiment config only has to state the
-    keys it actually changes.
-    """
+    """Merge nested mappings; replace all other values, including lists."""
     merged = copy.deepcopy(base)
     for key, value in patch.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -154,14 +117,7 @@ def load_config(
     overrides: list[str] | None = None,
     load_env: bool = True,
 ) -> Config:
-    """Build the effective config for a run.
-
-    Args:
-        config_path: Optional experiment config layered on top of the baseline.
-        overrides: ``key.path=value`` strings, applied last.
-        load_env: Read ``.env`` into the process environment. Disabled in tests
-            so a developer's real keys cannot leak into a test run.
-    """
+    """Load defaults, then an experiment file, then CLI overrides."""
     if load_env:
         load_dotenv(PROJECT_ROOT / ".env", override=False)
 
@@ -192,12 +148,7 @@ def load_model_registry() -> dict[str, Any]:
 
 
 def env(name: str, default: str | None = None) -> str | None:
-    """Read an environment variable, treating empty strings as unset.
-
-    ``.env.example`` ships every provider key as ``NAME=`` so users can see the
-    full list. Without this, an untouched line would register as a present but
-    empty key and produce a 401 instead of "you have not set this key".
-    """
+    """Read an environment variable, treating blank values as unset."""
     value = os.environ.get(name, default)
     if value is not None and not value.strip():
         return default

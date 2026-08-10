@@ -1,25 +1,4 @@
-"""Fetch StatsBomb open data for one competition and cache it locally.
-
-StatsBomb serves event-level JSON: one row per on-ball action, ~3,500 rows per
-match, 94 columns. Nothing downstream wants that shape directly, so this module
-does one job -- get the raw frames onto disk once -- and leaves aggregation to
-``tactistat.stats_tool``.
-
-Layout produced under ``data/raw/`` (gitignored, rebuildable in ~1 minute):
-
-    matches.parquet   one row per match  (64 for the 2022 World Cup)
-    events.parquet    one row per event  (~220k rows)
-    lineups.parquet   one row per player per match, with positions and times
-
-Parquet rather than the source JSON: same information, roughly a tenth of the
-size, and it loads in milliseconds instead of seconds. The JSON stays
-reproducible from StatsBomb's GitHub repository, so nothing is lost.
-
-Why cache at all when ``statsbombpy`` already memoises HTTP calls: its cache is
-per-process, so every notebook restart and every evaluation run would re-fetch
-64 matches. It also means the aggregation and evaluation steps run offline,
-which matters when an experiment is being re-run for the tenth time.
-"""
+"""Fetch StatsBomb matches, events, and lineups into local Parquet files."""
 
 from __future__ import annotations
 
@@ -32,17 +11,14 @@ from tqdm import tqdm
 
 from tactistat.config import Config
 
-# statsbombpy warns on every call that no credentials were supplied and it is
-# therefore using open data. That is exactly what we want, and the warning
-# fires once per match, so it would bury real output under 64 copies.
+# Open data intentionally uses no StatsBomb credentials.
 warnings.filterwarnings("ignore", message=".*credentials were not supplied.*")
 
 MATCHES_FILE = "matches.parquet"
 EVENTS_FILE = "events.parquet"
 LINEUPS_FILE = "lineups.parquet"
 
-# StatsBomb's endpoint is a GitHub raw file per match, so requests are I/O bound
-# and parallelise well. Kept modest to stay a polite consumer of a free service.
+# Modest concurrency for the free data endpoint.
 MAX_WORKERS = 8
 
 
@@ -57,9 +33,7 @@ def raw_dir(config: Config) -> Path:
     return path
 
 
-# --------------------------------------------------------------------------- #
-# Fetching                                                                     #
-# --------------------------------------------------------------------------- #
+# Fetching
 
 
 def fetch_matches(config: Config) -> pd.DataFrame:
@@ -80,19 +54,14 @@ def fetch_matches(config: Config) -> pd.DataFrame:
 
 
 def _fetch_one(match_id: int, kind: str) -> pd.DataFrame:
-    """Fetch events or lineups for a single match, tagged with ``match_id``.
-
-    ``sb.lineups`` returns a ``{team_name: DataFrame}`` mapping rather than a
-    frame, so the two kinds cannot share a code path.
-    """
+    """Fetch and tag events or lineups for one match."""
     from statsbombpy import sb
 
     if kind == "events":
         frame = sb.events(match_id=match_id)
         if frame is None or frame.empty:
             return pd.DataFrame()
-        # Present in most responses, but not guaranteed -- assign unconditionally
-        # so the concatenated frame always has it.
+        # Ensure a stable join key across responses.
         frame["match_id"] = match_id
         return frame
 
@@ -111,13 +80,7 @@ def _fetch_one(match_id: int, kind: str) -> pd.DataFrame:
 
 
 def fetch_per_match(match_ids: list[int], kind: str, desc: str) -> pd.DataFrame:
-    """Fetch ``kind`` for every match concurrently and concatenate.
-
-    A single failed match aborts the build rather than silently producing a
-    dataset with a hole in it. A per-90 table computed over 63 of 64 matches
-    looks perfectly plausible and is wrong, and nothing downstream would catch
-    it -- so the failure has to surface here.
-    """
+    """Fetch every match concurrently; fail if any result is missing."""
     frames: list[pd.DataFrame] = []
     errors: list[str] = []
 
@@ -142,17 +105,11 @@ def fetch_per_match(match_ids: list[int], kind: str, desc: str) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-# --------------------------------------------------------------------------- #
-# Build + load                                                                 #
-# --------------------------------------------------------------------------- #
+# Build and load
 
 
 def build_raw_dataset(config: Config, force: bool = False) -> dict[str, Path]:
-    """Download matches, events and lineups, writing parquet into ``data/raw/``.
-
-    Existing files are kept unless ``force`` is set, so re-running the script is
-    cheap and safe.
-    """
+    """Build the raw Parquet cache; reuse it unless ``force`` is set."""
     out = raw_dir(config)
     targets = {
         "matches": out / MATCHES_FILE,
@@ -174,11 +131,7 @@ def build_raw_dataset(config: Config, force: bool = False) -> dict[str, Path]:
     events = fetch_per_match(match_ids, "events", "  events ")
     lineups = fetch_per_match(match_ids, "lineups", "  lineups")
 
-    # Object columns holding lists or dicts (StatsBomb nests `location`,
-    # `pass_end_location`, tactical line-ups, ...) cannot round-trip through
-    # parquet's typed columns, so they are serialised as strings. Callers that
-    # need the structure parse it back explicitly; nothing in the current
-    # pipeline does, and keeping them avoids silently dropping data.
+    # Serialize nested objects that Parquet cannot store as one typed column.
     events = _stringify_nested(events)
     lineups = _stringify_nested(lineups)
 

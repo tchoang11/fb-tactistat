@@ -11,6 +11,31 @@ The large, fully reproducible inputs live in `../raw/` and are gitignored.
 | --- | --- | --- |
 | `wikipedia/corpus.jsonl` | ~5 MB | `scripts/02_build_corpus.py` |
 | `wikipedia/resolution_log.json` | ~50 KB | same |
+| `player_matches.parquet` | ~55 KB | `scripts/03_build_stats.py` |
+| `player_totals.parquet` | ~52 KB | same |
+
+## `player_matches.parquet` and `player_totals.parquet`
+
+`player_matches` is one row per player per match; `player_totals` collapses it
+to one row per player and adds per-90 rates. Both are keyed by `player_name`,
+which is StatsBomb's legal name — the same key the Wikipedia corpus stores in
+`entity_key`, so a retrieved article and a computed number can be joined.
+
+`minutes` is the load-bearing column, because every `*_per90` rate divides by
+it. It is reconstructed from the event stream rather than from the lineup
+`positions` field, which disagrees with the substitution record in six matches
+and puts twelve Iran players on the pitch at once against the United States.
+Stoppage time is excluded: a full match is 90 minutes whatever the referee
+added, so the denominator does not depend on how a match was officiated.
+
+`*_per90` columns are **null** below `dataset.min_minutes_for_per90` (270).
+A striker with eight minutes and one goal rates at 11.25 goals/90, which
+describes the divisor rather than the striker. `per90_eligible` flags which
+rows carry rates.
+
+`pass_accuracy` is null — not zero — for a player who attempted no passes.
+Zero would be a fabricated number rather than a missing one, and it would drag
+down any squad average it entered.
 
 ## `wikipedia/corpus.jsonl`
 
@@ -73,8 +98,14 @@ lists them.
 ```bash
 python scripts/01_build_dataset.py          # raw/, ~30 s
 python scripts/02_build_corpus.py --force   # here, ~90 s
+python scripts/03_build_stats.py            # here, ~10 s
 pytest tests/ -q
 ```
+
+`03_build_stats.py --check` runs the minutes reconciliation without writing
+anything: total minutes in a match must equal `22 x` its nominal length, less
+time played short after a dismissal or while a player is off the pitch. It can
+fall short; it can never exceed.
 
 Expect the corpus to differ slightly from the committed snapshot: Wikipedia
 articles are edited continuously, so revision IDs and section text move. The

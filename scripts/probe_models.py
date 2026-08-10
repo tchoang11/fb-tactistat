@@ -1,27 +1,5 @@
 #!/usr/bin/env python
-"""Verify every model in configs/models.yaml against the live endpoint.
-
-Provider model catalogues drift: IDs get renamed, checkpoints are retired, and
-free-tier eligibility changes without notice. Two failures this script exists
-to catch, both observed on 2026-08-06 while building the baseline:
-
-  * ``gemini-2.5-flash`` appears in Gemini's own ``/models`` listing but
-    answers ``404`` on ``generateContent`` for a free key. Listing a model is
-    not the same as being able to call it.
-  * Groq's Llama checkpoints reject strict ``json_schema`` decoding with HTTP
-    400 while accepting loose ``json_object`` mode, so a router built on the
-    stricter assumption fails only at request time.
-
-Discovering either of those in the middle of an evaluation run costs a rerun
-and casts doubt on any numbers already collected. Run this first instead:
-
-    python scripts/probe_models.py                 # every provider with a key
-    python scripts/probe_models.py --provider groq
-    python scripts/probe_models.py --list          # live catalogue, no calls
-
-Exit code is non-zero when a registered model fails or its real JSON
-capability contradicts the ``json_mode`` declared in the registry.
-"""
+"""Verify registered models and their declared JSON capabilities."""
 
 from __future__ import annotations
 
@@ -34,22 +12,14 @@ from typing import Any
 
 from tactistat.config import env, load_config, load_model_registry
 
-# A deliberately tiny task shaped like the real router prompt: force the model
-# to pick one value from a closed set. Small enough that probing every model
-# costs a negligible slice of a free-tier daily quota.
-# The literal word "json" must appear in the prompt: OpenAI-compatible servers
-# reject `response_format={"type": "json_object"}` outright when it does not.
+# Small router-shaped probe; some endpoints require "json" in the prompt.
 PROBE_PROMPT = (
     "Classify this football question as exactly one of STAT, TACTICAL, or HYBRID.\n"
     "Question: How many goals did Messi score at the 2022 World Cup?\n"
     'Reply with json of the form {"label": "..."}.'
 )
 
-# Two schema dialects, and one object cannot satisfy both:
-#   * OpenAI-compatible strict decoding REQUIRES `additionalProperties: false`
-#   * Gemini's OpenAPI-subset schema REJECTS that keyword with HTTP 400
-# Normalising this split is a core job of the client adapters; the probe has to
-# do it too, or it measures its own bug instead of the provider's capability.
+# OpenAI requires, while Gemini rejects, ``additionalProperties``.
 _BASE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {"label": {"type": "string", "enum": ["STAT", "TACTICAL", "HYBRID"]}},
@@ -58,8 +28,7 @@ _BASE_SCHEMA: dict[str, Any] = {
 PROBE_SCHEMA_OPENAI: dict[str, Any] = {**_BASE_SCHEMA, "additionalProperties": False}
 PROBE_SCHEMA_GEMINI: dict[str, Any] = _BASE_SCHEMA
 
-# Chat-completion probing is meaningless for these; they are speech, safety, or
-# embedding endpoints that happen to share the model listing.
+# Ignore non-chat endpoints returned by model catalogues.
 NON_CHAT_HINTS = ("whisper", "tts", "guard", "embedding", "orpheus", "image", "robotics")
 
 
@@ -78,11 +47,7 @@ class ProbeResult:
 
 
 def _probe_openai_compat(base_url: str, api_key: str | None, model_id: str) -> tuple[str, str]:
-    """Return ``(actual_mode, detail)`` for an OpenAI-compatible endpoint.
-
-    Walks the capability ladder from strict to loose and reports the strongest
-    mode that actually works, rather than the strongest one advertised.
-    """
+    """Return the strongest working JSON mode for an OpenAI-compatible model."""
     from openai import OpenAI
 
     # Ollama needs no credential but the SDK insists on a non-empty string.
@@ -123,12 +88,7 @@ def _probe_openai_compat(base_url: str, api_key: str | None, model_id: str) -> t
 
 
 def _probe_gemini(api_key: str, model_id: str) -> tuple[str, str]:
-    """Return ``(actual_mode, detail)`` for Gemini.
-
-    Gemini's ``response_schema`` is an OpenAPI-3 subset. It rejects
-    ``additionalProperties`` outright, which is why the probe schema omits it;
-    the production adapter sanitises schemas for the same reason.
-    """
+    """Probe Gemini with its supported OpenAPI schema subset."""
     from google import genai
     from google.genai import types
 
@@ -262,10 +222,7 @@ def main() -> int:
         if key_env and not env(key_env):
             print(f"skip {name:12} {key_env} not set  ({provider['signup_url']})")
             continue
-        # A keyless provider is a local server. "Not running" is a setup state,
-        # not a broken model, so probe every model behind it only once we know
-        # the server answers -- otherwise one stopped daemon reports as N
-        # separate model failures and buries the real ones.
+        # Skip a keyless local provider when its server is offline.
         if not key_env and not _local_server_up(provider.get("base_url", "")):
             url = provider.get("base_url")
             print(f"skip {name:12} no server at {url}  ({provider['signup_url']})")
