@@ -1,0 +1,11 @@
+{
+  "artifact": "wikipedia_corpus",
+  "schema_version": 1,
+  "dataset": {
+    "competition_id": 43,
+    "season_id": 106,
+    "competition_name": "FIFA World Cup",
+    "season_name": "2022"
+  },
+  "settings_hash": "e01116074b586bf9"
+}

@@ -7,19 +7,27 @@ on the day they crawled it.
 
 The large, fully reproducible inputs live in `../raw/` and are gitignored.
 
-| Path | Size | Produced by |
-| --- | --- | --- |
-| `wikipedia/corpus.jsonl` | ~5 MB | `scripts/02_build_corpus.py` |
-| `wikipedia/resolution_log.json` | ~50 KB | same |
-| `player_matches.parquet` | ~55 KB | `scripts/03_build_stats.py` |
-| `player_totals.parquet` | ~52 KB | same |
+| Path                              | Size   | Produced by                    |
+| --------------------------------- | ------ | ------------------------------ |
+| `wikipedia/corpus.jsonl`        | ~5 MB  | `scripts/02_build_corpus.py` |
+| `wikipedia/resolution_log.json` | ~50 KB | same                           |
+| `wikipedia/manifest.json`       | <1 KB  | same                           |
+| `player_matches.parquet`        | ~61 KB | `scripts/03_build_stats.py`  |
+| `player_totals.parquet`         | ~56 KB | same                           |
+| `player_aliases.parquet`        | ~34 KB | same                           |
+| `stats_matches.parquet`         | ~6 KB  | same                           |
+| `stats_manifest.json`           | <1 KB  | same                           |
 
 ## `player_matches.parquet` and `player_totals.parquet`
 
 `player_matches` is one row per player per match; `player_totals` collapses it
-to one row per player and adds per-90 rates. Both are keyed by `player_name`,
-which is StatsBomb's legal name — the same key the Wikipedia corpus stores in
-`entity_key`, so a retrieved article and a computed number can be joined.
+to one row per player and adds per-90 rates. Both use StatsBomb `player_id` as
+the identity key, so name variants such as `Phil Foden` and `Philip Foden` stay
+in one row. `player_name` is the canonical display and Wikipedia join name.
+
+`player_aliases` supports name resolution without raw lineups.
+`stats_matches` supplies fixture, stage, and date filters without raw matches.
+`stats_manifest` prevents querying processed data for the wrong competition.
 
 `minutes` is the load-bearing column, because every `*_per90` rate divides by
 it. It is reconstructed from the event stream rather than from the lineup

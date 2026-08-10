@@ -113,13 +113,21 @@ def _probe_gemini(api_key: str, model_id: str) -> tuple[str, str]:
 
 def _extract_label(text: str) -> str | None:
     """Pull ``label`` out of a reply that may or may not be clean JSON."""
+    allowed = {"STAT", "TACTICAL", "HYBRID"}
+
+    def valid_label(payload: Any) -> str | None:
+        if not isinstance(payload, dict):
+            return None
+        label = payload.get("label")
+        return label if label in allowed else None
+
     try:
-        return json.loads(text)["label"]
+        return valid_label(json.loads(text))
     except Exception:  # noqa: BLE001
         start, end = text.find("{"), text.rfind("}")
         if start != -1 and end > start:
             try:
-                return json.loads(text[start : end + 1])["label"]
+                return valid_label(json.loads(text[start : end + 1]))
             except Exception:  # noqa: BLE001
                 return None
         return None

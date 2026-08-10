@@ -5,10 +5,18 @@ from __future__ import annotations
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from tqdm import tqdm
 
+from tactistat.artifacts import (
+    ARTIFACT_SCHEMA_VERSION,
+    manifest_matches,
+    read_manifest,
+    write_json_atomic,
+    write_parquet_atomic,
+)
 from tactistat.config import Config
 
 # Open data intentionally uses no StatsBomb credentials.
@@ -17,6 +25,7 @@ warnings.filterwarnings("ignore", message=".*credentials were not supplied.*")
 MATCHES_FILE = "matches.parquet"
 EVENTS_FILE = "events.parquet"
 LINEUPS_FILE = "lineups.parquet"
+RAW_MANIFEST_FILE = "manifest.json"
 
 # Modest concurrency for the free data endpoint.
 MAX_WORKERS = 8
@@ -24,6 +33,24 @@ MAX_WORKERS = 8
 
 class DataError(Exception):
     """Raised when the requested competition data cannot be fetched or is empty."""
+
+
+def dataset_identity(config: Config) -> dict[str, Any]:
+    """Return the configured competition identity stored in artifact manifests."""
+    return {
+        "competition_id": int(config["dataset.competition_id"]),
+        "season_id": int(config["dataset.season_id"]),
+        "competition_name": str(config["dataset.competition_name"]),
+        "season_name": str(config["dataset.season_name"]),
+    }
+
+
+def raw_manifest(config: Config) -> dict[str, Any]:
+    return {
+        "artifact": "statsbomb_raw",
+        "schema_version": ARTIFACT_SCHEMA_VERSION,
+        "dataset": dataset_identity(config),
+    }
 
 
 def raw_dir(config: Config) -> Path:
@@ -116,10 +143,30 @@ def build_raw_dataset(config: Config, force: bool = False) -> dict[str, Path]:
         "events": out / EVENTS_FILE,
         "lineups": out / LINEUPS_FILE,
     }
+    manifest_path = out / RAW_MANIFEST_FILE
+    expected_manifest = raw_manifest(config)
 
     if not force and all(path.exists() for path in targets.values()):
-        print(f"Raw dataset already present in {out} (use --force to refetch).")
-        return targets
+        manifest = read_manifest(manifest_path)
+        if manifest_matches(manifest, expected_manifest):
+            print(f"Raw dataset already present in {out} (use --force to refetch).")
+            return targets
+
+        matches = pd.read_parquet(targets["matches"], columns=["competition_id", "season_id"])
+        cached_dataset = {
+            "competition_id": int(matches["competition_id"].iloc[0]),
+            "season_id": int(matches["season_id"].iloc[0]),
+        }
+        expected_dataset = expected_manifest["dataset"]
+        if all(cached_dataset[key] == expected_dataset[key] for key in cached_dataset):
+            write_json_atomic(manifest_path, expected_manifest)
+            print(f"Raw dataset already present in {out} (manifest added).")
+            return targets
+        raise DataError(
+            f"Cached data in {out} belongs to competition_id="
+            f"{cached_dataset['competition_id']}, season_id={cached_dataset['season_id']}; "
+            "use --force to replace it."
+        )
 
     competition = f"{config['dataset.competition_name']} {config['dataset.season_name']}"
     print(f"Fetching {competition} from StatsBomb open data...")
@@ -135,9 +182,10 @@ def build_raw_dataset(config: Config, force: bool = False) -> dict[str, Path]:
     events = _stringify_nested(events)
     lineups = _stringify_nested(lineups)
 
-    matches.to_parquet(targets["matches"], index=False)
-    events.to_parquet(targets["events"], index=False)
-    lineups.to_parquet(targets["lineups"], index=False)
+    write_parquet_atomic(matches, targets["matches"])
+    write_parquet_atomic(events, targets["events"])
+    write_parquet_atomic(lineups, targets["lineups"])
+    write_json_atomic(manifest_path, expected_manifest)
 
     for name, path in targets.items():
         size_mb = path.stat().st_size / 1e6
@@ -161,6 +209,46 @@ def _stringify_nested(frame: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def _preferred_text(values: pd.Series) -> str | None:
+    """Choose the most frequent non-blank value, breaking ties alphabetically."""
+    clean = values[values.map(lambda value: isinstance(value, str) and bool(value.strip()))]
+    if clean.empty:
+        return None
+    counts = clean.value_counts()
+    return sorted(counts[counts == counts.max()].index)[0]
+
+
+def build_player_index(lineups: pd.DataFrame) -> pd.DataFrame:
+    """Return one canonical name, nickname, and team per StatsBomb player ID."""
+    frame = lineups.dropna(subset=["player_id"]).copy()
+    frame["player_id"] = frame["player_id"].astype(int)
+    records = []
+    for player_id, group in frame.groupby("player_id", sort=True):
+        records.append(
+            {
+                "player_id": int(player_id),
+                "player_name": _preferred_text(group["player_name"]),
+                "player_nickname": _preferred_text(group["player_nickname"]),
+                "team": _preferred_text(group["team"]),
+            }
+        )
+    return pd.DataFrame.from_records(records)
+
+
+def build_player_aliases(lineups: pd.DataFrame) -> pd.DataFrame:
+    """Return every observed legal name and nickname for each player ID."""
+    index = build_player_index(lineups).set_index("player_id")
+    records: set[tuple[int, str]] = set()
+    for row in lineups.dropna(subset=["player_id"]).itertuples():
+        player_id = int(row.player_id)
+        for value in (row.player_name, row.player_nickname, index.loc[player_id, "player_name"]):
+            if isinstance(value, str) and value.strip():
+                records.add((player_id, value.strip()))
+    aliases = pd.DataFrame(sorted(records), columns=["player_id", "alias"])
+    aliases["player_name"] = aliases["player_id"].map(index["player_name"])
+    return aliases
+
+
 def _load(config: Config, filename: str) -> pd.DataFrame:
     path = raw_dir(config) / filename
     if not path.exists():
@@ -171,16 +259,38 @@ def _load(config: Config, filename: str) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+def _validate_raw_manifest(config: Config) -> None:
+    manifest = read_manifest(raw_dir(config) / RAW_MANIFEST_FILE)
+    if not manifest_matches(manifest, raw_manifest(config)):
+        raise DataError(
+            "Raw StatsBomb cache has no compatible manifest; "
+            "run scripts/01_build_dataset.py to validate it."
+        )
+
+
 def load_matches(config: Config) -> pd.DataFrame:
     """Match list, one row per match."""
-    return _load(config, MATCHES_FILE)
+    matches = _load(config, MATCHES_FILE)
+    expected = dataset_identity(config)
+    cached = {
+        "competition_id": int(matches["competition_id"].iloc[0]),
+        "season_id": int(matches["season_id"].iloc[0]),
+    }
+    if any(cached[key] != expected[key] for key in cached):
+        raise DataError(
+            "Cached StatsBomb matches do not match the configured competition and season; "
+            "run scripts/01_build_dataset.py --force."
+        )
+    return matches
 
 
 def load_events(config: Config) -> pd.DataFrame:
     """Event table, one row per on-ball action across the whole competition."""
+    _validate_raw_manifest(config)
     return _load(config, EVENTS_FILE)
 
 
 def load_lineups(config: Config) -> pd.DataFrame:
     """Lineup table, one row per player per match."""
+    _validate_raw_manifest(config)
     return _load(config, LINEUPS_FILE)

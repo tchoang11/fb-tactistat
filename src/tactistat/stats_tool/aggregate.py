@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from tactistat.config import Config, ConfigError
-from tactistat.data.statsbomb import load_events
+from tactistat.data.statsbomb import build_player_index, load_events, load_lineups
 from tactistat.stats_tool.minutes import IN_PLAY_PERIODS, compute_minutes
 
 
@@ -89,9 +89,18 @@ def check_configured_metrics(config: Config) -> None:
             f"stats_tool.metrics names unimplemented metric(s): {unknown}. "
             f"Available: {sorted(available_metrics())}"
         )
-    unknown_per90 = sorted(set(config["stats_tool.per90_metrics"]) - set(available_metrics()))
+    configured = set(config["stats_tool.metrics"])
+    per90_metrics = set(config["stats_tool.per90_metrics"])
+    unknown_per90 = sorted(per90_metrics - set(METRICS_BY_NAME))
     if unknown_per90:
-        raise ConfigError(f"stats_tool.per90_metrics names unknown metric(s): {unknown_per90}")
+        raise ConfigError(
+            f"stats_tool.per90_metrics must name additive event metric(s): {unknown_per90}"
+        )
+    disabled_per90 = sorted(per90_metrics - configured)
+    if disabled_per90:
+        raise ConfigError(
+            f"stats_tool.per90_metrics must also appear in stats_tool.metrics: {disabled_per90}"
+        )
 
 
 # Per player, per match
@@ -102,33 +111,41 @@ def build_player_matches(config: Config) -> pd.DataFrame:
     check_configured_metrics(config)
 
     events = load_events(config)
-    in_play = events[events["period"] <= IN_PLAY_PERIODS]
+    in_play = events[events["period"] <= IN_PLAY_PERIODS].copy()
+    in_play["player_id"] = in_play["player_id"].astype("Int64")
 
-    counts = in_play.groupby(["match_id", "team", "player"], dropna=True)
+    keys = ["match_id", "team", "player_id"]
+    counts = in_play.groupby(keys, dropna=True)
     table = pd.DataFrame(index=counts.size().index)
 
     for metric in METRICS:
         masked = in_play[metric.mask(in_play)]
         if metric.value_column:
-            series = masked.groupby(["match_id", "team", "player"])[metric.value_column].sum()
+            series = masked.groupby(keys)[metric.value_column].sum()
         else:
-            series = masked.groupby(["match_id", "team", "player"]).size()
+            series = masked.groupby(keys).size()
         table[metric.name] = series
 
-    table = table.fillna(0.0).reset_index().rename(columns={"player": "player_name"})
+    table = table.fillna(0.0).reset_index()
 
-    minutes = compute_minutes(config, events).rename(columns={"player": "player_name"})
-    merged = table.merge(minutes, on=["match_id", "team", "player_name"], how="outer")
+    minutes = compute_minutes(config, events).drop(columns="player")
+    minutes["player_id"] = minutes["player_id"].astype("Int64")
+    merged = table.merge(minutes, on=keys, how="outer")
+
+    players = build_player_index(load_lineups(config))[["player_id", "player_name"]]
+    players["player_id"] = players["player_id"].astype("Int64")
+    merged = merged.merge(players, on="player_id", how="left", validate="many_to_one")
 
     metric_columns = [m.name for m in METRICS]
     merged[metric_columns] = merged[metric_columns].fillna(0.0)
     merged["minutes"] = merged["minutes"].fillna(0.0)
+    merged["appeared"] = True
 
     integer_columns = [m.name for m in METRICS if m.value_column is None]
     merged[integer_columns] = merged[integer_columns].astype(int)
 
     merged["pass_accuracy"] = _ratio(merged["passes_completed"], merged["passes_attempted"])
-    return merged.sort_values(["match_id", "team", "player_name"]).reset_index(drop=True)
+    return merged.sort_values(["match_id", "team", "player_id"]).reset_index(drop=True)
 
 
 def _ratio(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
@@ -144,13 +161,15 @@ def build_player_totals(config: Config, player_matches: pd.DataFrame | None = No
     matches = build_player_matches(config) if player_matches is None else player_matches
 
     metric_columns = [m.name for m in METRICS]
-    grouped = matches.groupby("player_name")
+    grouped = matches.groupby("player_id")
 
     totals = grouped[[*metric_columns, "minutes"]].sum()
+    totals["player_name"] = grouped["player_name"].first()
     totals["team"] = grouped["team"].first()
     totals["matches_played"] = grouped["match_id"].nunique()
     totals["appearances"] = grouped.apply(
-        lambda g: int((g["minutes"] > 0).sum()), include_groups=False
+        lambda group: int(group.loc[group["appeared"], "match_id"].nunique()),
+        include_groups=False,
     )
 
     totals["pass_accuracy"] = _ratio(totals["passes_completed"], totals["passes_attempted"])
@@ -162,4 +181,11 @@ def build_player_totals(config: Config, player_matches: pd.DataFrame | None = No
         totals[f"{name}_per90"] = per90.where(eligible)
 
     totals["per90_eligible"] = eligible
-    return totals.reset_index().sort_values("goals", ascending=False).reset_index(drop=True)
+    columns = [
+        "player_id",
+        "player_name",
+        *[column for column in totals if column != "player_name"],
+    ]
+    return (
+        totals.reset_index()[columns].sort_values("goals", ascending=False).reset_index(drop=True)
+    )

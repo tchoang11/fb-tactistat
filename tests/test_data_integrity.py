@@ -72,7 +72,9 @@ def test_all_teams_present(matches):
 
 def test_every_match_has_two_starting_elevens(events):
     """Each match has one Starting XI event per team."""
-    assert (events["type"] == "Starting XI").sum() == N_MATCHES * 2
+    counts = events[events["type"] == "Starting XI"].groupby("match_id").size()
+    assert len(counts) == N_MATCHES
+    assert counts.eq(2).all()
 
 
 def test_extra_time_is_present(events):

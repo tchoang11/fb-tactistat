@@ -17,11 +17,27 @@ import pandas as pd
 import requests
 from tqdm import tqdm
 
+from tactistat.artifacts import (
+    ARTIFACT_SCHEMA_VERSION,
+    manifest_matches,
+    read_manifest,
+    stable_hash,
+    write_json_atomic,
+    write_text_atomic,
+)
 from tactistat.config import Config
-from tactistat.data.statsbomb import load_events, load_lineups, load_matches
+from tactistat.data.statsbomb import (
+    DataError,
+    build_player_index,
+    dataset_identity,
+    load_events,
+    load_lineups,
+    load_matches,
+)
 
 CORPUS_FILE = "corpus.jsonl"
 RESOLUTION_LOG_FILE = "resolution_log.json"
+CORPUS_MANIFEST_FILE = "manifest.json"
 
 # Stored on each page for attribution.
 LICENSE = "CC BY-SA 4.0"
@@ -128,17 +144,12 @@ def select_players(config: Config) -> pd.DataFrame:
 
     lineups = lineups.copy()
     lineups["played"] = lineups["positions"].apply(lambda c: len(_played_positions(c)) > 0)
-    appeared = lineups[lineups["played"]]
+    appeared = lineups[lineups["played"]].copy()
+    appeared["player_id"] = appeared["player_id"].astype(int)
 
-    per_player = (
-        appeared.groupby("player_name")
-        .agg(
-            apps=("match_id", "nunique"),
-            team=("team", "first"),
-            nickname=("player_nickname", "first"),
-        )
-        .reset_index()
-    )
+    per_player = appeared.groupby("player_id").agg(apps=("match_id", "nunique")).reset_index()
+    player_index = build_player_index(lineups).rename(columns={"player_nickname": "nickname"})
+    per_player = per_player.merge(player_index, on="player_id", validate="one_to_one")
 
     # Period 5 contains shootout kicks.
     goals = (
@@ -147,11 +158,13 @@ def select_players(config: Config) -> pd.DataFrame:
             & (events["shot_outcome"] == "Goal")
             & (events["period"] <= 4)
         ]
-        .groupby("player")
+        .dropna(subset=["player_id"])
+        .assign(player_id=lambda frame: frame["player_id"].astype(int))
+        .groupby("player_id")
         .size()
         .rename("goals")
     )
-    per_player = per_player.merge(goals, how="left", left_on="player_name", right_index=True)
+    per_player = per_player.merge(goals, how="left", left_on="player_id", right_index=True)
     per_player["goals"] = per_player["goals"].fillna(0).astype(int)
 
     keep = per_player["apps"] >= config["wikipedia.min_appearances"]
@@ -323,8 +336,17 @@ class WikipediaClient:
         self.maxlag = config["wikipedia.maxlag_seconds"]
         self.max_retries = config["wikipedia.max_retries"]
         self.limiter = _RateLimiter(config["wikipedia.requests_per_second"])
-        self.session = requests.Session()
-        self.session.headers["User-Agent"] = config["wikipedia.user_agent"]
+        self.user_agent = config["wikipedia.user_agent"]
+        self._sessions = threading.local()
+
+    def _session(self) -> requests.Session:
+        """Give each worker its own requests session."""
+        session = getattr(self._sessions, "value", None)
+        if session is None:
+            session = requests.Session()
+            session.headers["User-Agent"] = self.user_agent
+            self._sessions.value = session
+        return session
 
     def _get(self, params: dict[str, Any]) -> dict[str, Any]:
         params = {"format": "json", "formatversion": 2, "maxlag": self.maxlag, **params}
@@ -333,7 +355,7 @@ class WikipediaClient:
         for attempt in range(self.max_retries):
             self.limiter.acquire()
             try:
-                response = self.session.get(self.endpoint, params=params, timeout=self.timeout)
+                response = self._session().get(self.endpoint, params=params, timeout=self.timeout)
             except requests.RequestException as exc:
                 last_error = exc
                 time.sleep(2**attempt)
@@ -461,6 +483,23 @@ class WikipediaClient:
 # Build corpus
 
 
+def corpus_manifest(config: Config) -> dict[str, Any]:
+    """Describe inputs that affect corpus scope and text."""
+    settings = {
+        "language": config["wikipedia.language"],
+        "min_appearances": config["wikipedia.min_appearances"],
+        "include_all_scorers": config["wikipedia.include_all_scorers"],
+        "drop_sections": config["wikipedia.drop_sections"],
+        "min_section_chars": config["wikipedia.min_section_chars"],
+    }
+    return {
+        "artifact": "wikipedia_corpus",
+        "schema_version": ARTIFACT_SCHEMA_VERSION,
+        "dataset": dataset_identity(config),
+        "settings_hash": stable_hash(settings),
+    }
+
+
 def _fetch_one(
     client: WikipediaClient, spec: PageSpec, config: Config
 ) -> tuple[WikiPage | None, dict]:
@@ -518,10 +557,17 @@ def build_corpus(config: Config, force: bool = False) -> Path:
     out_dir = config.path("rag.corpus_dir")
     out_dir.mkdir(parents=True, exist_ok=True)
     corpus_path = out_dir / CORPUS_FILE
+    manifest_path = out_dir / CORPUS_MANIFEST_FILE
+    expected_manifest = corpus_manifest(config)
 
     if corpus_path.exists() and not force:
-        print(f"Corpus already present at {corpus_path} (use --force to refetch).")
-        return corpus_path
+        if manifest_matches(read_manifest(manifest_path), expected_manifest):
+            print(f"Corpus already present at {corpus_path} (use --force to refetch).")
+            return corpus_path
+        raise DataError(
+            "Cached Wikipedia corpus does not match the configured dataset or settings; "
+            "use --force to rebuild it."
+        )
 
     specs = build_page_specs(config)
     by_type: dict[str, int] = {}
@@ -557,17 +603,14 @@ def build_corpus(config: Config, force: bool = False) -> Path:
         seen.add(page.page_id)
         unique.append(page)
 
-    with corpus_path.open("w", encoding="utf-8") as handle:
-        for page in unique:
-            handle.write(page.to_json() + "\n")
+    write_text_atomic(corpus_path, "".join(page.to_json() + "\n" for page in unique))
 
     log_path = out_dir / RESOLUTION_LOG_FILE
-    log_path.write_text(
-        json.dumps(
-            sorted(log, key=lambda e: (e["status"], e["query"])), ensure_ascii=False, indent=2
-        ),
-        encoding="utf-8",
+    write_json_atomic(
+        log_path,
+        sorted(log, key=lambda entry: (entry["status"], entry["query"])),
     )
+    write_json_atomic(manifest_path, expected_manifest)
 
     total_sections = sum(len(p.sections) for p in unique)
     total_chars = sum(len(s.text) for p in unique for s in p.sections)
@@ -588,6 +631,12 @@ def load_corpus(config: Config) -> list[WikiPage]:
     if not path.exists():
         raise FileNotFoundError(
             f"{path} not found. Build the corpus first:\n    python scripts/02_build_corpus.py"
+        )
+    if not manifest_matches(
+        read_manifest(path.parent / CORPUS_MANIFEST_FILE), corpus_manifest(config)
+    ):
+        raise DataError(
+            "Wikipedia corpus does not match the configured dataset or settings; rebuild it."
         )
     pages: list[WikiPage] = []
     with path.open("r", encoding="utf-8") as handle:

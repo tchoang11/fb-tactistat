@@ -183,6 +183,16 @@ def test_xg_is_present_wherever_shots_are(totals):
     assert (shooters["xg"] > 0).all()
 
 
+def test_player_id_keeps_name_variants_in_one_row(totals):
+    """Phil and Philip Foden are aliases for the same StatsBomb player."""
+    assert totals["player_id"].is_unique
+    foden = totals[totals["player_id"] == 4354]
+    assert len(foden) == 1
+    assert foden.iloc[0]["player_name"] == "Phil Foden"
+    assert foden.iloc[0]["goals"] == 1
+    assert foden.iloc[0]["appearances"] == 4
+
+
 # Per-90 normalization
 
 
@@ -254,8 +264,35 @@ class TestNameResolution:
     def test_a_player_who_was_not_there_is_not_found(self, engine):
         assert engine.resolve_player("Zinedine Zidane").status == "not_found"
 
+    def test_name_variants_resolve_by_player_id(self, engine):
+        resolution = engine.resolve_player("Foden")
+        assert resolution.status == "ok"
+        assert resolution.player_id == 4354
+        assert resolution.player_name == "Phil Foden"
+
 
 class TestQueries:
+    def test_engine_reads_committed_tables_without_raw_data(self, config, monkeypatch):
+        import tactistat.stats_tool.query as query_module
+
+        monkeypatch.setattr(query_module, "load_matches", lambda _: pytest.fail("raw matches read"))
+        monkeypatch.setattr(query_module, "load_lineups", lambda _: pytest.fail("raw lineups read"))
+        assert StatsQueryEngine(config).player_metric("Messi", "goals").rows[0].value == 7
+
+    def test_manifest_rejects_a_different_competition(self):
+        config = load_config(overrides=["dataset.competition_id=999"], load_env=False)
+        with pytest.raises(DataError, match="do not match"):
+            StatsQueryEngine(config)
+
+    def test_metric_whitelist_is_enforced(self):
+        config = load_config(
+            overrides=["stats_tool.metrics=[goals]", "stats_tool.per90_metrics=[goals]"],
+            load_env=False,
+        )
+        answer = StatsQueryEngine(config).player_metric("Messi", "shots")
+        assert not answer.ok
+        assert "disabled" in answer.note
+
     def test_player_metric_returns_the_official_number(self, engine):
         answer = engine.player_metric("Messi", "goals")
         assert answer.ok
@@ -268,12 +305,25 @@ class TestQueries:
         assert sum(ref.value for ref in answer.evidence) == answer.rows[0].value
         assert all(ref.match_id > 0 and ref.fixture for ref in answer.evidence)
 
+    def test_zero_minute_stoppage_sub_events_remain_in_evidence(self, engine):
+        """A nominal zero-minute appearance can still contain recorded events."""
+        answer = engine.player_metric("Filip Djuricic", "key_passes")
+        assert answer.rows[0].value == 1
+        assert sum(ref.value for ref in answer.evidence) == 1
+        assert any(ref.minutes == 0 and ref.value == 1 for ref in answer.evidence)
+        assert answer.rows[0].appearances == 2
+
     def test_leaderboard_ranks_by_the_official_record(self, engine):
         answer = engine.leaderboard("goals", top_n=4)
         assert [row.player_name for row in answer.rows][:2] == [
             "Kylian Mbappé Lottin",
             MESSI,
         ]
+
+    def test_leaderboard_has_evidence_for_every_returned_player(self, engine):
+        answer = engine.leaderboard("goals", top_n=4)
+        expected_ids = {row.player_id for row in answer.rows}
+        assert {ref.player_id for ref in answer.evidence} == expected_ids
 
     def test_per90_leaderboard_excludes_short_appearances(self, config, engine):
         answer = engine.leaderboard("goals", top_n=10, per90=True)
@@ -292,6 +342,13 @@ class TestQueries:
         assert len(answer.rows) == 1
         assert "Zidane" in answer.note
 
+    def test_compare_drops_ineligible_per90_rows_without_nan(self, engine):
+        answer = engine.compare(["Messi", "Foden"], "goals", per90=True)
+        assert answer.ok
+        assert [row.player_name for row in answer.rows] == [MESSI]
+        assert "Foden" in answer.note
+        assert all(row.value == row.value for row in answer.rows)
+
     def test_an_unknown_metric_is_refused_not_approximated(self, engine):
         answer = engine.player_metric("Messi", "nutmegs")
         assert not answer.ok
@@ -304,6 +361,25 @@ class TestQueries:
         answer = engine.player_metric(short["player_name"], "goals", per90=True)
         assert not answer.ok
         assert "threshold" in answer.note
+
+    def test_valid_metric_without_per90_has_a_specific_refusal(self, engine):
+        answer = engine.player_metric("Messi", "pass_accuracy", per90=True)
+        assert not answer.ok
+        assert "not available" in answer.note
+
+    def test_active_threshold_recomputes_cached_per90(self):
+        config = load_config(overrides=["dataset.min_minutes_for_per90=450"], load_env=False)
+        engine = StatsQueryEngine(config)
+        answer = engine.leaderboard("goals", top_n=50, per90=True)
+        assert answer.ok
+        assert all(row.minutes >= 450 for row in answer.rows)
+
+    def test_stage_filter_reaggregates_only_matching_games(self, engine):
+        answer = engine.player_metric("Messi", "goals", stage="Group Stage")
+        assert answer.ok
+        assert answer.rows[0].value == 2
+        assert answer.rows[0].appearances == 3
+        assert {ref.stage for ref in answer.evidence} == {"Group Stage"}
 
     def test_context_block_states_the_basis(self, engine):
         """Context distinguishes raw totals from per-90 rates."""

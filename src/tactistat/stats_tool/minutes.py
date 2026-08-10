@@ -59,17 +59,17 @@ def _red_card(row: Any) -> str | None:
     return card if isinstance(card, str) else None
 
 
-Spells = dict[str, list[list[float | None]]]
+Spells = dict[int, list[list[float | None]]]
 
 
-def _close_spell(spells: Spells, player: str, at: float) -> None:
+def _close_spell(spells: Spells, player_id: int, at: float) -> None:
     """Close the player's current on-pitch interval, if open."""
-    if spells.get(player) and spells[player][-1][1] is None:
-        spells[player][-1][1] = at
+    if spells.get(player_id) and spells[player_id][-1][1] is None:
+        spells[player_id][-1][1] = at
 
 
 def compute_minutes(config: Config, events: pd.DataFrame | None = None) -> pd.DataFrame:
-    """Return ``match_id``, ``team``, ``player``, and minutes played."""
+    """Return player identity, team, appearance, and minutes per match."""
     events = load_events(config) if events is None else events
     lengths = match_length(config, events)
 
@@ -79,7 +79,8 @@ def compute_minutes(config: Config, events: pd.DataFrame | None = None) -> pd.Da
         final_whistle = lengths[match_id]
         # A player may have multiple [start, end] intervals.
         spells: Spells = defaultdict(list)
-        team_of: dict[str, str] = {}
+        team_of: dict[int, str] = {}
+        name_of: dict[int, str] = {}
 
         for row in group.itertuples():
             at = nominal_clock(row.period, row.minute, row.second)
@@ -88,39 +89,46 @@ def compute_minutes(config: Config, events: pd.DataFrame | None = None) -> pd.Da
                 # Parquet stores this nested value as a repr string.
                 lineup = ast.literal_eval(row.tactics)["lineup"]
                 for entry in lineup:
+                    player_id = int(entry["player"]["id"])
                     name = entry["player"]["name"]
-                    team_of[name] = row.team
-                    spells[name].append([0.0, None])
+                    team_of[player_id] = row.team
+                    name_of[player_id] = name
+                    spells[player_id].append([0.0, None])
 
             elif row.type == "Substitution":
-                _close_spell(spells, row.player, at)
-                replacement = row.substitution_replacement
-                team_of[replacement] = row.team
-                spells[replacement].append([at, None])
+                _close_spell(spells, int(row.player_id), at)
+                replacement_id = int(row.substitution_replacement_id)
+                team_of[replacement_id] = row.team
+                name_of[replacement_id] = row.substitution_replacement
+                spells[replacement_id].append([at, None])
 
             elif row.type == "Player Off":
-                _close_spell(spells, row.player, at)
+                _close_spell(spells, int(row.player_id), at)
 
             elif row.type == "Player On":
-                team_of.setdefault(row.player, row.team)
-                spells[row.player].append([at, None])
+                player_id = int(row.player_id)
+                team_of.setdefault(player_id, row.team)
+                name_of.setdefault(player_id, row.player)
+                spells[player_id].append([at, None])
 
             elif _red_card(row) in RED_CARDS:
-                _close_spell(spells, row.player, at)
+                _close_spell(spells, int(row.player_id), at)
 
-        for player, intervals in spells.items():
+        for player_id, intervals in spells.items():
             total = sum(
                 (end if end is not None else final_whistle) - start for start, end in intervals
             )
             records.append(
                 {
                     "match_id": match_id,
-                    "team": team_of.get(player),
-                    "player": player,
+                    "team": team_of.get(player_id),
+                    "player_id": player_id,
+                    "player": name_of.get(player_id),
+                    "appeared": True,
                     "minutes": round(total, 4),
                 }
             )
 
     return pd.DataFrame.from_records(
-        records, columns=["match_id", "team", "player", "minutes"]
+        records, columns=["match_id", "team", "player_id", "player", "appeared", "minutes"]
     ).sort_values(["match_id", "team", "minutes"], ascending=[True, True, False])

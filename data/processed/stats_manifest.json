@@ -1,0 +1,10 @@
+{
+  "artifact": "player_stats",
+  "schema_version": 1,
+  "dataset": {
+    "competition_id": 43,
+    "season_id": 106,
+    "competition_name": "FIFA World Cup",
+    "season_name": "2022"
+  }
+}

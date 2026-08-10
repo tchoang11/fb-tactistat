@@ -1,5 +1,4 @@
 # Baseline configuration; experiments override only changed values.
-#     tactistat ask --set rag.top_k=10 --set models.synthesis=gemini:2.5-flash "..."
 
 # --- Data scope ---------------------------------------------------------------
 # One competition shared by stats and RAG data.

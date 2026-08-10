@@ -58,13 +58,20 @@ class Config:
 
     def set(self, path: str, value: Any) -> None:
         """Write ``a.b.c``, creating intermediate dicts as needed."""
+        if not path or any(not part for part in path.split(".")):
+            raise ConfigError("Config path must contain non-empty dotted keys")
         parts = path.split(".")
         node = self._data
         for part in parts[:-1]:
-            existing = node.get(part)
-            if not isinstance(existing, dict):
+            existing = node.get(part, _MISSING)
+            if existing is _MISSING:
                 existing = {}
                 node[part] = existing
+            elif not isinstance(existing, dict):
+                raise ConfigError(
+                    f"Cannot set {path!r}: intermediate key {part!r} is "
+                    f"{type(existing).__name__}, not a section"
+                )
             node = existing
         node[parts[-1]] = value
 

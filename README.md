@@ -69,18 +69,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh     # if you do not have uv
 uv venv --python 3.12
 uv pip install -e ".[dev]"
 
-# Data: ~30 s, writes ~28 MB to data/raw/ (gitignored, fully reproducible)
-python scripts/01_build_dataset.py
+# Query the committed processed tables; no API key or raw data needed
+tactistat stats goals Messi
+tactistat stats goals Messi Mbappe --per90
 
-# Verify the dataset against externally known facts before trusting it
+# Run the regression suite
 pytest tests/ -q
 ```
 
 The Wikipedia corpus and the aggregated stats tables are **committed to the
-repository**, so neither the crawl nor the aggregation is required. To rebuild
-them anyway:
+repository**. To reproduce them from the raw event data:
 
 ```bash
+python scripts/01_build_dataset.py          # ~30 s; writes gitignored data/raw/
 python scripts/02_build_corpus.py --force   # ~90 s
 python scripts/03_build_stats.py            # ~10 s
 python scripts/03_build_stats.py --check    # minutes reconciliation only
@@ -124,18 +125,14 @@ decoding mode explicitly: on Groq, only the `gpt-oss` family accepts strict
 label is impossible" into "an invalid label is unlikely" — a difference that
 surfaces in the evaluation numbers rather than as an exception.
 
-Each role can point at a different model, and any of them can be overridden per
-run:
+Each role can point at a different model and can be overridden per run. The
+full natural-language agent and evaluation CLI are roadmap items; the current
+CLI exposes deterministic stats queries:
 
 ```bash
-# Defaults from configs/default.yaml
-tactistat ask "How many goals did Messi score at the 2022 World Cup?"
-
-# Override one role
-tactistat ask --set models.synthesis=gemini:3.6-flash "..."
-
-# Sweep a role across models as an ablation axis
-tactistat eval --sweep models.synthesis=groq:llama-3.3-70b,gemini:3.6-flash
+tactistat stats goals Messi
+tactistat stats goals Messi Mbappe --per90
+tactistat stats goals --top-n 5 --stage "Group Stage"
 ```
 
 The judge deliberately defaults to a different provider *and* model family from
@@ -152,6 +149,8 @@ configs/
   default.yaml        baseline system; every ablation is a diff against this
   models.yaml         provider/model registry with measured capabilities
 src/tactistat/
+  artifacts.py        atomic writes and artifact manifests
+  cli.py              build commands and deterministic stats queries
   config.py           three-layer config: defaults -> experiment -> --set
   data/
     statsbomb.py      fetch and cache event data
@@ -159,7 +158,7 @@ src/tactistat/
   stats_tool/
     minutes.py        minutes played, reconstructed from the event stream
     aggregate.py      per-player tables and per-90 normalisation
-    query.py          slots from the router -> number + supporting matches
+    query.py          filters -> number + supporting matches
     langchain_tool.py the same engine, bound as a structured tool
   rag_tool/           chunking, embedding, retrieval, reranking (next)
   router/             question classification                   (next)
