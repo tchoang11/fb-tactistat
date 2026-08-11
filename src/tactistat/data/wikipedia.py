@@ -484,7 +484,7 @@ class WikipediaClient:
 
 
 def corpus_manifest(config: Config) -> dict[str, Any]:
-    """Describe inputs that affect corpus scope and text."""
+    """Fingerprint the settings that define corpus scope."""
     settings = {
         "language": config["wikipedia.language"],
         "min_appearances": config["wikipedia.min_appearances"],
@@ -498,6 +498,17 @@ def corpus_manifest(config: Config) -> dict[str, Any]:
         "dataset": dataset_identity(config),
         "settings_hash": stable_hash(settings),
     }
+
+
+def content_hash(pages: list[WikiPage]) -> str:
+    """Fingerprint the page revisions returned by a crawl."""
+    return stable_hash(sorted([page.page_id, page.revision_id] for page in pages))
+
+
+def corpus_content_hash(config: Config) -> str | None:
+    """The fingerprint recorded alongside the corpus on disk."""
+    manifest = read_manifest(config.path("rag.corpus_dir") / CORPUS_MANIFEST_FILE)
+    return (manifest or {}).get("content_hash")
 
 
 def _fetch_one(
@@ -610,7 +621,7 @@ def build_corpus(config: Config, force: bool = False) -> Path:
         log_path,
         sorted(log, key=lambda entry: (entry["status"], entry["query"])),
     )
-    write_json_atomic(manifest_path, expected_manifest)
+    write_json_atomic(manifest_path, {**expected_manifest, "content_hash": content_hash(unique)})
 
     total_sections = sum(len(p.sections) for p in unique)
     total_chars = sum(len(s.text) for p in unique for s in p.sections)

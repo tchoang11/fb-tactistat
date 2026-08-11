@@ -23,13 +23,22 @@ dependencies = [
     # LangChain tools/model adapters and the LangGraph pipeline.
     "langchain>=1.0",
     "langgraph>=1.0",
-    "langchain-community>=0.4",   # BM25Retriever, cross-encoder reranker
+    # EnsembleRetriever, ContextualCompressionRetriever and CrossEncoderReranker
+    # live in langchain-classic as of LangChain 1.0; BM25Retriever, the FAISS
+    # store and HuggingFaceCrossEncoder are in langchain-community, which is
+    # being sunset. Both are pinned rather than avoided: replacing them means
+    # hand-rolling rank fusion and reranking, which is the work this project
+    # deliberately does not spend its budget on.
+    "langchain-classic>=1.0",
+    "langchain-community>=0.4",
     "langchain-groq>=1.0",
     "langchain-google-genai>=4.0",
     "langchain-huggingface>=1.0",
+    "langchain-text-splitters>=1.0",
 
     # --- Retrieval ----------------------------------------------------------
     "sentence-transformers>=3.0",
+    "transformers>=4.44",       # tokenizer used to budget chunks in tokens
     "faiss-cpu>=1.8",
     "rank-bm25>=0.2.2",
 
@@ -72,3 +81,6 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: requires a built index and downloaded Hugging Face models",
+]

@@ -7,9 +7,9 @@ and both when a question needs both.
 Built on the 2022 FIFA World Cup — 64 matches of StatsBomb event data and 318
 Wikipedia articles scoped to the teams, players, and concepts that appear in it.
 
-> **Status: in progress.** The data layer and the stats tool are complete and
-> tested. Retrieval, router, synthesis, and the evaluation study are being
-> built next — see [Roadmap](#roadmap).
+> **Status: in progress.** The data layer, the stats tool, and retrieval are
+> complete and tested. The router, synthesis, and the evaluation study are
+> being built next — see [Roadmap](#roadmap).
 
 ---
 
@@ -73,8 +73,15 @@ uv pip install -e ".[dev]"
 tactistat stats goals Messi
 tactistat stats goals Messi Mbappe --per90
 
+# Retrieval needs an index built from the committed corpus (~1 min, once)
+tactistat build-index
+tactistat search "Morocco Spain round of 16 2022" --mode hybrid --rerank
+
 # Run the regression suite
 pytest tests/ -q
+
+# Optional: requires the built index and downloaded Hugging Face models
+TACTISTAT_RUN_RAG_INTEGRATION=1 pytest tests/test_rag_tool.py -m integration -q
 ```
 
 The Wikipedia corpus and the aggregated stats tables are **committed to the
@@ -160,7 +167,11 @@ src/tactistat/
     aggregate.py      per-player tables and per-90 normalisation
     query.py          filters -> number + supporting matches
     langchain_tool.py the same engine, bound as a structured tool
-  rag_tool/           chunking, embedding, retrieval, reranking (next)
+  rag_tool/
+    chunking.py       section or fixed windows, budgeted in real tokens
+    index.py          embeddings + FAISS, with the chunk table beside it
+    retrieve.py       dense / bm25 / hybrid, optionally reranked
+    langchain_tool.py retrieval bound as a structured tool
   router/             question classification                   (next)
   synthesis/          answer generation with citations          (next)
   eval/               metrics and the ablation harness          (next)
@@ -253,6 +264,47 @@ alongside the 2022 one. `tests/test_wikipedia_resolution.py` pins every case.
 Wikipedia text is CC BY-SA 4.0; page title, URL, and revision ID are stored
 with every record for attribution.
 
+### Retrieval
+
+Chunks are budgeted in the embedding model's **own tokens**, prefix included.
+11.5% of this corpus's sections exceed bge-small's 512-token window, and a
+sentence-transformer given more than its window truncates and returns an
+embedding anyway — no exception, no warning. The tail of every long section
+would simply be unreachable, and nothing downstream could say so: retrieval
+still returns five passages and recall is just quietly lower. An earlier
+chunker split to exactly 512 and *then* prefixed each chunk with its page
+title, pushing 70 chunks over; `tests/test_rag_tool.py` pins it.
+
+| Strategy | Chunks | Over the window |
+| --- | --- | --- |
+| `section`, 512 tokens (baseline) | 5,073 | 0 |
+| `fixed`, 300 tokens | 5,893 | 0 |
+| `fixed`, 500 tokens | 3,363 | 0 |
+
+Hybrid retrieval fuses **ranks, not scores**. A BM25 score is unbounded and
+corpus-relative while a normalised cosine similarity lives in [-1, 1], so a
+weighted sum of the two means something different for every query. Reciprocal
+rank fusion only asks how highly each retriever placed a document, which is
+comparable by construction.
+
+BM25 matches literal terms, so queries and documents are tokenised the same
+way — case and accents folded. LangChain's default is `text.split()`, which
+left the index case-sensitive: `Lionel Messi` returned his page while
+`lionel messi` returned Harry Maguire.
+
+The index carries a manifest folding in the chunking settings, the embedding
+model, and a **fingerprint of the corpus text itself** — the page and revision
+IDs actually crawled, not just the config that asked for them. Config alone
+would let `build-corpus --force` pull newer Wikipedia text while every index
+built on it still looked current, citing revisions that no longer say what the
+answer claims. The ablation varies exactly these, so a stale index is a likely
+accident rather than a hypothetical one.
+
+A rebuild is staged in a scratch directory and swapped in, and the manifest is
+removed before any live file is touched. An interrupted rebuild therefore
+leaves an index that is *refused* — the config is unchanged, so a surviving
+manifest would still match a half-written index.
+
 ---
 
 ## Roadmap
@@ -260,7 +312,7 @@ with every record for attribution.
 - [x] Data layer: StatsBomb ingestion, Wikipedia corpus, integrity tests
 - [x] Model registry across seven providers, verified against live endpoints
 - [x] Stats tool: minutes, aggregation, per-90 normalisation, query interface
-- [ ] RAG tool: section chunking, embeddings, BM25, hybrid retrieval, reranking
+- [x] RAG tool: section chunking, embeddings, BM25, hybrid retrieval, reranking
 - [ ] Router and synthesis; LangGraph pipeline
 - [ ] Evaluation set: 40–50 questions with ground truth
 - [ ] Baseline and ablation study (chunking, embedding model, retrieval, rerank)

@@ -95,10 +95,15 @@ rag:
   index_dir: data/index
 
   # Default to semantic Wikipedia section boundaries.
+  # max_tokens is a hard budget measured with the embedding model's own
+  # tokenizer, and it includes the title/heading prefix every chunk carries.
+  # 11.5% of sections exceed bge-small's 512-token window, and a
+  # sentence-transformer truncates silently rather than failing, so anything
+  # over the budget would be embedded as a prefix and a fragment.
   chunking:
     strategy: section          # section | fixed
     max_tokens: 512            # sections longer than this get sub-split
-    overlap_tokens: 0          # only used by the `fixed` strategy
+    overlap_tokens: 0          # applied within a split section, never across two
 
   embedding:
     model: BAAI/bge-small-en-v1.5
@@ -108,7 +113,11 @@ rag:
   retrieval:
     mode: dense                # dense | bm25 | hybrid
     top_k: 5
-    hybrid_alpha: 0.5          # weight on dense scores when mode == hybrid
+    # Hybrid fuses ranks, not scores: a BM25 score is unbounded and
+    # corpus-relative while a normalised cosine similarity lives in [-1, 1],
+    # so a weighted sum of the two means something different for every query.
+    # This is the dense retriever's weight in the reciprocal rank fusion.
+    hybrid_alpha: 0.5
 
   rerank:
     enabled: false
