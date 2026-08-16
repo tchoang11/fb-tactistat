@@ -409,25 +409,33 @@ class TestLangChainTool:
             {"type": "tool_call", "id": "t", "name": "football_stats", "args": args}
         )
 
-    def test_argument_count_selects_the_operation(self, stats_tool):
-        """0 players ranks, 1 looks up, and 2+ compares."""
-        ranking = self._call(stats_tool, metric="goals", top_n=3).artifact
-        lookup = self._call(stats_tool, metric="goals", players=["Messi"]).artifact
-        comparison = self._call(stats_tool, metric="goals", players=["Messi", "Mbappe"]).artifact
+    def test_the_operation_argument_selects_the_query(self, stats_tool):
+        """The router names the operation; it is no longer inferred from arity."""
+
+        def call(**kwargs):
+            return self._call(stats_tool, metric="goals", **kwargs).artifact
+
+        ranking = call(operation="ranking", top_n=3)
+        lookup = call(operation="player", players=["Messi"])
+        comparison = call(operation="compare", players=["Messi", "Mbappe"])
+        squad = call(operation="total", team="Argentina")
 
         assert len(ranking.rows) == 3
         assert len(lookup.rows) == 1 and lookup.rows[0].value == 7
         assert len(comparison.rows) == 2
+        # A ranking truncated to top_n does not add up to the squad total.
+        assert squad.total.value == 15
+        assert squad.total.value > sum(row.value for row in squad.rows[:5])
 
     def test_the_artifact_carries_the_number_not_a_paraphrase(self, stats_tool):
         """Evaluation receives the structured result and evidence."""
-        message = self._call(stats_tool, metric="goals", players=["Messi"])
+        message = self._call(stats_tool, metric="goals", operation="player", players=["Messi"])
         assert message.artifact.rows[0].value == 7
         assert len(message.artifact.evidence) == 7
         assert isinstance(message.content, str)
 
     def test_a_refusal_survives_the_binding(self, stats_tool):
-        message = self._call(stats_tool, metric="goals", players=["Alvarez"])
+        message = self._call(stats_tool, metric="goals", operation="player", players=["Alvarez"])
         assert not message.artifact.ok
         assert "ambiguous" in message.content
 
@@ -438,3 +446,20 @@ class TestLangChainTool:
         described = metric_schema["description"]
         for metric in available_metrics():
             assert metric in described
+
+
+def test_a_tournament_total_includes_own_goals(engine):
+    """Own goals belong to a team and survive in no per-player table."""
+    assert engine.total("goals").total.value == 172
+    assert sum(engine.player_totals["goals"]) == 169
+
+
+@pytest.mark.parametrize(
+    ("team", "goals", "own"),
+    [("Argentina", 15, 0), ("Australia", 4, 1), ("Canada", 2, 1), ("Costa Rica", 3, 1)],
+)
+def test_a_squad_total_credits_the_own_goals_it_benefited_from(engine, team, goals, own):
+    answer = engine.total("goals", team=team)
+    assert (answer.total.value, answer.total.own_goals) == (goals, own)
+    # The note exists only where an own goal actually contributed.
+    assert ("own goal" in (answer.note or "")) is bool(own)

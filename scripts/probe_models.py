@@ -46,7 +46,12 @@ class ProbeResult:
         return not self.ok or self.declared_mode == self.actual_mode
 
 
-def _probe_openai_compat(base_url: str, api_key: str | None, model_id: str) -> tuple[str, str]:
+def _probe_openai_compat(
+    base_url: str,
+    api_key: str | None,
+    model_id: str,
+    extra_body: dict[str, Any] | None = None,
+) -> tuple[str, str]:
     """Return the strongest working JSON mode for an OpenAI-compatible model."""
     from openai import OpenAI
 
@@ -74,6 +79,11 @@ def _probe_openai_compat(base_url: str, api_key: str | None, model_id: str) -> t
         }
         if response_format is not None:
             kwargs["response_format"] = response_format
+        if extra_body:
+            # Provider-required parameters outside the OpenAI schema, e.g.
+            # DashScope rejects qwen3 non-streaming calls without
+            # enable_thinking=false.
+            kwargs["extra_body"] = extra_body
         try:
             reply = client.chat.completions.create(**kwargs)
             text = reply.choices[0].message.content or ""
@@ -186,7 +196,9 @@ def probe_provider(provider_name: str, provider: dict[str, Any]) -> list[ProbeRe
             if provider["kind"] == "gemini":
                 actual, detail = _probe_gemini(api_key or "", model_id)
             else:
-                actual, detail = _probe_openai_compat(provider["base_url"], api_key, model_id)
+                actual, detail = _probe_openai_compat(
+                    provider["base_url"], api_key, model_id, provider.get("extra_body")
+                )
             results.append(
                 ProbeResult(
                     handle, True, int((time.time() - started) * 1000), declared, actual, detail

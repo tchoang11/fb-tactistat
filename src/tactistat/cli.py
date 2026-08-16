@@ -7,6 +7,7 @@ import argparse
 from tactistat.config import load_config
 from tactistat.data.statsbomb import build_raw_dataset
 from tactistat.data.wikipedia import build_corpus
+from tactistat.pipeline import TactiStatPipeline
 from tactistat.rag_tool.index import build_index
 from tactistat.rag_tool.retrieve import MODES, RagRetriever
 from tactistat.stats_tool.aggregate import build_player_matches
@@ -20,6 +21,42 @@ def _check_minutes(config, player_matches) -> bool:
     over = difference[difference > 0.01]
     print(f"matches checked: {len(difference)}; over-counted: {len(over)}")
     return over.empty
+
+
+def _ask(config, args) -> int:
+    """Answer a question, and say plainly when the answer failed its checks."""
+    result = TactiStatPipeline(config).run(args.question)
+    if args.trace:
+        translation = result.translation
+        print(f"[{translation.source_language}/{translation.status}] {translation.query}")
+        print(f"{result.route.label} {result.route.stats_args or ''}")
+        for query in result.retrieval_queries:
+            print(f"  search: {query[:100]}")
+        for repair in result.route.repairs:
+            print(f"  repair: {repair}")
+        print(f"  {result.timings_ms}\n")
+
+    for failure in result.tool_failures:
+        print(f"! tool failed — {failure}")
+    # An answer that failed its checks is shown, but never as a plain answer:
+    # the CLI is where an unsupported claim would otherwise look authoritative.
+    if not result.answer.ok:
+        print(f"! UNVERIFIED — {result.answer.note}")
+        print("! the text below did not pass the evidence checks\n")
+    elif result.status == "partial":
+        print("! partial — one tool failed; the answer uses the rest\n")
+
+    print(result.answer.text)
+
+    # A bracket is only useful if the reader can reach what it points at.
+    if result.answer.cited and result.rag is not None:
+        print("\nSources:")
+        by_rank = {passage.rank: passage for passage in result.rag.passages}
+        for rank in result.answer.cited:
+            passage = by_rank.get(rank)
+            if passage is not None:
+                print(f"  [{rank}] {passage.cite()}\n      {passage.url}")
+    return 0 if result.ok else 1
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -55,6 +92,11 @@ def _parser() -> argparse.ArgumentParser:
     search.add_argument("--rerank", action="store_true", help="overrides rag.rerank.enabled")
     search.add_argument("--full", action="store_true", help="print whole passages")
 
+    ask = commands.add_parser("ask", help="answer a question end to end")
+    ask.add_argument("question")
+    ask.add_argument("--strategy", help="overrides query_translation.strategy")
+    ask.add_argument("--trace", action="store_true", help="print each stage's decision")
+
     stats = commands.add_parser("stats", help="query one structured player statistic")
     stats.add_argument("metric")
     stats.add_argument("players", nargs="*")
@@ -75,6 +117,8 @@ def main() -> int:
         overrides.append(f"rag.retrieval.mode={args.mode}")
     if getattr(args, "rerank", False):
         overrides.append("rag.rerank.enabled=true")
+    if getattr(args, "strategy", None):
+        overrides.append(f"query_translation.strategy={args.strategy}")
     config = load_config(args.config, overrides)
 
     if args.command == "build-data":
@@ -95,6 +139,8 @@ def main() -> int:
         state = "built" if result["rebuilt"] else "already current"
         print(f"index {state}: {result['chunks']} chunks in {result['path']}")
         return 0
+    if args.command == "ask":
+        return _ask(config, args)
     if args.command == "search":
         answer = RagRetriever(config).search(args.query, top_k=args.top_k)
         print(answer.to_context(max_chars=10_000 if args.full else 400))

@@ -103,6 +103,25 @@ def check_configured_metrics(config: Config) -> None:
         )
 
 
+# Own goals belong to a team, never to a player, so they survive nowhere in the
+# per-player tables and must be carried separately for team totals.
+OWN_GOAL_EVENT = "Own Goal For"
+
+
+def build_team_own_goals(config: Config) -> pd.DataFrame:
+    """Count own goals credited to each team, per match."""
+    events = load_events(config)
+    scored = events[(events["type"] == OWN_GOAL_EVENT) & (events["period"] <= IN_PLAY_PERIODS)]
+    counted = (
+        scored.groupby(["match_id", "team"]).size().reset_index(name="own_goals")
+        if not scored.empty
+        else pd.DataFrame(columns=["match_id", "team", "own_goals"])
+    )
+    counted["match_id"] = counted["match_id"].astype("int64")
+    counted["own_goals"] = counted["own_goals"].astype("int64")
+    return counted
+
+
 # Per player, per match
 
 

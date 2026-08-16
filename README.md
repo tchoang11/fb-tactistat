@@ -7,9 +7,9 @@ and both when a question needs both.
 Built on the 2022 FIFA World Cup — 64 matches of StatsBomb event data and 318
 Wikipedia articles scoped to the teams, players, and concepts that appear in it.
 
-> **Status: in progress.** The data layer, the stats tool, and retrieval are
-> complete and tested. The router, synthesis, and the evaluation study are
-> being built next — see [Roadmap](#roadmap).
+> **Status: in progress.** The data layer, the stats tool, retrieval, and the
+> full question-answering pipeline are complete and tested. The LangGraph graph
+> and the evaluation study are being built next — see [Roadmap](#roadmap).
 
 ---
 
@@ -113,10 +113,11 @@ Both defaults are free and need no credit card:
 | Provider | Used for | Free tier | Sign-up |
 | --- | --- | --- | --- |
 | Groq | router, synthesis | ~30 RPM, ~1k req/day per model | <https://console.groq.com/keys> |
-| Google Gemini | LLM judge | flash tier | <https://aistudio.google.com/apikey> |
+| Google Gemini | translator, LLM judge | flash tier | <https://aistudio.google.com/apikey> |
 
-Cerebras, OpenRouter, GitHub Models, OpenAI, and a local Ollama server are also
-registered in [`configs/models.yaml`](configs/models.yaml).
+Alibaba Cloud DashScope, Cerebras, OpenRouter, GitHub Models, OpenAI, and a
+local Ollama server are also registered in
+[`configs/models.yaml`](configs/models.yaml).
 
 ---
 
@@ -132,20 +133,63 @@ decoding mode explicitly: on Groq, only the `gpt-oss` family accepts strict
 label is impossible" into "an invalid label is unlikely" — a difference that
 surfaces in the evaluation numbers rather than as an exception.
 
+That measured-not-assumed habit is also what makes a provider retiring a model
+a config edit. When Groq decommissioned `llama-3.3-70b-versatile`, the two
+suggested replacements were re-measured on the real synthesis prompts rather
+than adopted on advice: one of them leaks its reasoning trace into every reply
+and was rejected. Swapping the survivor in was a one-line change to
+[`configs/default.yaml`](configs/default.yaml).
+
 Each role can point at a different model and can be overridden per run. The
-full natural-language agent and evaluation CLI are roadmap items; the current
-CLI exposes deterministic stats queries:
+evaluation harness is a roadmap item; the CLI already answers questions end to
+end, and exposes the stats engine deterministically:
 
 ```bash
 tactistat stats goals Messi
 tactistat stats goals Messi Mbappe --per90
 tactistat stats goals --top-n 5 --stage "Group Stage"
+
+# End to end, in either language, with every stage's decision shown
+tactistat ask "Argentina ghi bao nhiêu bàn?" --trace
+tactistat ask "Why was Morocco hard to break down?" --strategy hyde
 ```
+
+A ranking and a total are different questions, and the router picks between
+them: Argentina's top five scorers sum to 14 of the squad's 15 goals, so
+answering "how many goals did Argentina score?" from a truncated leaderboard is
+wrong by one goal. The router fills an `operation` slot — `player`, `compare`,
+`ranking` or `total` — and every slot it returns is validated against the
+configured metrics before a tool sees it; each repair is recorded so the
+evaluation can report which one fired.
 
 The judge deliberately defaults to a different provider *and* model family from
 synthesis. LLM judges show a measurable preference for text produced by their
 own family, and letting one model both write and grade an answer would put that
 bias inside every faithfulness number in the report.
+
+---
+
+## Query translation
+
+Questions arrive in Vietnamese or English, often as a fragment — *"Messi bàn
+thắng"*. The corpus is English and BM25 matches literal terms, so an
+untranslated question retrieves nothing at all. Translation is therefore a
+correctness step, not a tuning knob, and it is kept separate from the rewrite
+strategy layered on top of it. Both collapse into a single LLM call.
+
+| `query_translation.strategy` | What is retrieved |
+| --- | --- |
+| `off` | a literal translation, wording and ambiguity preserved |
+| `rewrite` | one self-contained English question |
+| `multi_query` | the question plus `n_variants` phrasings, fused by reciprocal rank |
+| `hyde` | a hypothetical Wikipedia passage, used as the search key |
+
+`off` is the arm that isolates what rewriting buys over translation alone;
+`query_translation.enabled: false` is the harsher baseline that measures what
+translation itself is worth. The rewrite must not change what was asked — a
+count question that comes back as a *who* question is the failure mode that
+disqualified three candidate models
+([`configs/models.yaml`](configs/models.yaml)).
 
 ---
 
@@ -172,8 +216,15 @@ src/tactistat/
     index.py          embeddings + FAISS, with the chunk table beside it
     retrieve.py       dense / bm25 / hybrid, optionally reranked
     langchain_tool.py retrieval bound as a structured tool
-  router/             question classification                   (next)
-  synthesis/          answer generation with citations          (next)
+  pipeline.py         translate -> route -> tools -> synthesise
+  llm/
+    registry.py       handle -> chat model, with the measured decoding mode
+  query_translation/
+    translate.py      any-language question -> English retrieval queries
+  router/
+    route.py          question -> label + validated tool slots
+  synthesis/
+    synthesize.py     tool evidence -> cited answer, or an abstention
   eval/               metrics and the ablation harness          (next)
 scripts/
   01_build_dataset.py StatsBomb download
@@ -313,7 +364,8 @@ manifest would still match a half-written index.
 - [x] Model registry across seven providers, verified against live endpoints
 - [x] Stats tool: minutes, aggregation, per-90 normalisation, query interface
 - [x] RAG tool: section chunking, embeddings, BM25, hybrid retrieval, reranking
-- [ ] Router and synthesis; LangGraph pipeline
+- [x] Query translation, router, cited synthesis, and the `tactistat ask` CLI
+- [ ] LangGraph graph and LangSmith tracing over the same stages
 - [ ] Evaluation set: 40–50 questions with ground truth
 - [ ] Baseline and ablation study (chunking, embedding model, retrieval, rerank)
 - [ ] Bootstrap confidence intervals for player comparisons

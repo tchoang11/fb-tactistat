@@ -1,6 +1,6 @@
 {
   "artifact": "player_stats",
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset": {
     "competition_id": 43,
     "season_id": 106,

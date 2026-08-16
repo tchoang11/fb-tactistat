@@ -21,15 +21,12 @@ providers:
         id: openai/gpt-oss-20b
         json_mode: schema
         verified: "2026-08-06, 970ms"
-      llama-3.3-70b:
-        id: llama-3.3-70b-versatile
-        json_mode: object
-        verified: "2026-08-06, 592ms"
       llama-3.1-8b:
         id: llama-3.1-8b-instant
         json_mode: object
         verified: "2026-08-06, 220ms"
-      # qwen3.6-27b rejects both structured JSON modes.
+      # llama-3.3-70b-versatile was decommissioned by Groq on 2026-08-16.
+      # Its replacement here is gpt-oss-120b
 
   gemini:
     kind: gemini
@@ -38,10 +35,12 @@ providers:
     free_tier: "flash tier only; pro models answer 429 on a free key"
     # Gemini accepts an OpenAPI subset, not full JSON Schema.
     schema_dialect: openapi_subset
+    # fixed_sampling: the model ignores temperature, so we do not send it.
     models:
       3.6-flash:
         id: gemini-3.6-flash
         json_mode: schema
+        fixed_sampling: true
         verified: "2026-08-06, 2128ms"
       3.5-flash:
         id: gemini-3.5-flash
@@ -50,6 +49,7 @@ providers:
       3.5-flash-lite:
         id: gemini-3.5-flash-lite
         json_mode: schema
+        fixed_sampling: true
         verified: "2026-08-06, 851ms"
       3.1-flash-lite:
         id: gemini-3.1-flash-lite
@@ -66,6 +66,23 @@ providers:
     models:
       llama-3.3-70b: { id: llama-3.3-70b, json_mode: object, verified: "not tested - no key" }
       gpt-oss-120b:  { id: gpt-oss-120b,  json_mode: schema, verified: "not tested - no key" }
+
+  dashscope:
+    kind: openai_compat
+    base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    signup_url: https://modelstudio.console.alibabacloud.com
+    free_tier: "per-model token grant with an expiry, not a renewing daily quota"
+    extra_body: { enable_thinking: false }
+    models:
+      qwen-plus:  { id: qwen-plus,  json_mode: schema, verified: "2026-08-11, 1725ms" }
+      qwen-turbo: { id: qwen-turbo, json_mode: schema, verified: "2026-08-11, 381ms" }
+      qwen-flash: { id: qwen-flash, json_mode: schema, verified: "2026-08-11, 290ms" }
+      qwen3-32b:  { id: qwen3-32b,  json_mode: schema, verified: "2026-08-11, 410ms" }
+      # DashScope also serves DeepSeek; both accept strict schema.
+      deepseek-v3.2:   { id: deepseek-v3.2,   json_mode: schema, verified: "2026-08-16, 596ms" }
+      deepseek-v4-pro: { id: deepseek-v4-pro, json_mode: schema, verified: "2026-08-16, 1250ms" }
+      # deepseek-v4-flash reformats 0.94 as 0,94, breaking number-fidelity checks.
 
   openrouter:
     kind: openai_compat

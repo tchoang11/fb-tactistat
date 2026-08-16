@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from threading import Lock
 from typing import Any
 
@@ -17,6 +17,8 @@ from tactistat.rag_tool.index import load_chunks, load_vectorstore
 MODES = ("dense", "bm25", "hybrid")
 MAX_TOP_K = 50
 MAX_CANDIDATE_K = 200
+# Rank-fusion damping; 60 is the constant the RRF paper settled on.
+RRF_K = 60
 
 _WORD_RE = re.compile(r"\w+", re.UNICODE)
 
@@ -234,3 +236,46 @@ class RagRetriever:
                 query, self.mode, self.reranked, ok=False, note="no passage matched the query"
             )
         return RagAnswer(query, self.mode, self.reranked, passages=passages)
+
+    def search_multi(self, queries: list[str], top_k: int | None = None) -> RagAnswer:
+        """Search several phrasings of one question and fuse them by rank.
+
+        Backs the multi_query and hyde arms: the phrasings retrieve different
+        passages, and reciprocal rank fusion needs no comparable scores between
+        them.
+        """
+        unique: list[str] = []
+        for query in queries or []:
+            text = (query or "").strip()
+            if text and text not in unique:
+                unique.append(text)
+        if len(unique) <= 1:
+            return self.search(unique[0] if unique else "", top_k=top_k)
+
+        limit = self.top_k if top_k is None else top_k
+        scores: dict[int, float] = {}
+        best: dict[int, Passage] = {}
+        for query in unique:
+            answer = self.search(query, top_k=limit)
+            if not answer.ok:
+                continue
+            for passage in answer.passages:
+                scores[passage.chunk_id] = scores.get(passage.chunk_id, 0.0) + 1.0 / (
+                    RRF_K + passage.rank
+                )
+                if passage.chunk_id not in best or passage.rank < best[passage.chunk_id].rank:
+                    best[passage.chunk_id] = passage
+
+        if not best:
+            return RagAnswer(
+                unique[0], self.mode, self.reranked, ok=False, note="no passage matched any variant"
+            )
+        ordered = sorted(best.values(), key=lambda p: (-scores[p.chunk_id], p.chunk_id))[:limit]
+        passages = [replace(p, rank=rank) for rank, p in enumerate(ordered, start=1)]
+        return RagAnswer(
+            unique[0],
+            self.mode,
+            self.reranked,
+            passages=passages,
+            note=f"fused {len(unique)} query variants by reciprocal rank",
+        )

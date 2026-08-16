@@ -13,11 +13,14 @@ dataset:
 # --- Which model plays which role --------------------------------------------
 # Handles resolve through models.yaml; judge uses another model family.
 models:
+  # Multilingual
+  translator: gemini:3.5-flash-lite
+
   # Supports strict JSON schema for router labels.
   router: groq:gpt-oss-20b
 
-  # Larger prose model for final answers.
-  synthesis: groq:llama-3.3-70b
+  # Prose model for final answers; dashscope:deepseek-v3.2 is the second arm.
+  synthesis: groq:gpt-oss-120b
 
   # Separate family reduces judge self-preference.
   judge: gemini:3.6-flash
@@ -28,9 +31,25 @@ llm:
   max_tokens: 1024
   timeout_seconds: 60
   max_retries: 3
+  # A thinking model spends this budget reasoning before it answers.
+  max_tokens_by_role:
+    judge: 4096
   # Reuse identical model calls across evaluations.
   cache_enabled: true
   cache_dir: data/cache/llm
+
+# --- Query translation --------------------------------------------------------
+# Users write Vietnamese or English, often as a fragment; the corpus is English
+# only, so an untranslated question retrieves nothing. Disabling this is the
+# baseline arm that measures what translation is worth, not a normal setting.
+query_translation:
+  enabled: true
+  # off         = literal translation, wording preserved
+  # rewrite     = one self-contained English question
+  # multi_query = rewrite + n_variants phrasings, fused by reciprocal rank
+  # hyde        = rewrite + a hypothetical passage, used as the search key
+  strategy: rewrite
+  n_variants: 3
 
 # --- Router -------------------------------------------------------------------
 router:

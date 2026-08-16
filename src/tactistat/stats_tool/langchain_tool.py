@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
 from tactistat.config import Config
 from tactistat.stats_tool.aggregate import available_metrics
-from tactistat.stats_tool.query import StatsAnswer, StatsQueryEngine
+from tactistat.stats_tool.query import StatsAnswer, StatsQueryEngine, run_stats_operation
 
 
 class FootballStatsInput(BaseModel):
@@ -16,13 +18,18 @@ class FootballStatsInput(BaseModel):
     metric: str = Field(
         description="Statistic to compute. One of: " + ", ".join(sorted(available_metrics()))
     )
+    operation: Literal["player", "ranking", "compare", "total"] = Field(
+        default="ranking",
+        description=(
+            "player: one named player. compare: two or more named players. "
+            "ranking: the leading top_n players. total: the sum over a whole "
+            "squad (set team) or the whole tournament. A ranking truncated to "
+            "top_n does not add up to a total."
+        ),
+    )
     players: list[str] = Field(
         default_factory=list,
-        description=(
-            "Player names from the question. Leave empty for a tournament-wide "
-            "ranking; give one name to look that player up; give two or more to "
-            "compare them."
-        ),
+        description="Player names from the question; empty for ranking and total.",
     )
     per90: bool = Field(
         default=False,
@@ -62,6 +69,7 @@ def make_stats_tool(config: Config, engine: StatsQueryEngine | None = None) -> B
     )
     def football_stats(
         metric: str,
+        operation: str = "ranking",
         players: list[str] | None = None,
         per90: bool = False,
         top_n: int = 5,
@@ -72,19 +80,19 @@ def make_stats_tool(config: Config, engine: StatsQueryEngine | None = None) -> B
         date_to: str | None = None,
     ) -> tuple[str, StatsAnswer]:
         """Compute a World Cup statistic with supporting match evidence."""
-        players = players or []
-        scope = {
-            "match_ids": match_ids,
-            "stage": stage,
-            "date_from": date_from,
-            "date_to": date_to,
-        }
-        if len(players) == 0:
-            answer = engine.leaderboard(metric, top_n=top_n, per90=per90, team=team, **scope)
-        elif len(players) == 1:
-            answer = engine.player_metric(players[0], metric, per90=per90, **scope)
-        else:
-            answer = engine.compare(players, metric, per90=per90, **scope)
+        answer = run_stats_operation(
+            engine,
+            operation=operation,
+            metric=metric,
+            players=players or [],
+            per90=per90,
+            top_n=top_n,
+            team=team,
+            match_ids=match_ids,
+            stage=stage,
+            date_from=date_from,
+            date_to=date_to,
+        )
         return answer.to_context(), answer
 
     return football_stats
