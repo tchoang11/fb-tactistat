@@ -8,8 +8,8 @@ Built on the 2022 FIFA World Cup — 64 matches of StatsBomb event data and 318
 Wikipedia articles scoped to the teams, players, and concepts that appear in it.
 
 > **Status: in progress.** The data layer, the stats tool, retrieval, and the
-> full question-answering pipeline are complete and tested. The LangGraph graph
-> and the evaluation study are being built next — see [Roadmap](#roadmap).
+> full LangGraph question-answering pipeline are complete and tested. The
+> evaluation study is being built next — see [Roadmap](#roadmap).
 
 ---
 
@@ -151,7 +151,10 @@ tactistat stats goals --top-n 5 --stage "Group Stage"
 
 # End to end, in either language, with every stage's decision shown
 tactistat ask "Argentina ghi bao nhiêu bàn?" --trace
-tactistat ask "Why was Morocco hard to break down?" --strategy hyde
+tactistat ask "Why was Morocco hard to break down?" --strategy hyde --stream
+
+# Follow-up questions resolve against the conversation
+tactistat chat
 ```
 
 A ranking and a total are different questions, and the router picks between
@@ -162,10 +165,103 @@ wrong by one goal. The router fills an `operation` slot — `player`, `compare`,
 configured metrics before a tool sees it; each repair is recorded so the
 evaluation can report which one fired.
 
+Support is checked per clause, not per answer. "Morocco pressed high [1]. France
+won the tournament." cites a passage and is still half invented; so does
+"Morocco pressed high [1] and France won the tournament", where the bracket
+never leaves the first half of the sentence. Text is split on sentence
+punctuation, line breaks, list bullets, `;`, `:` and coordinating conjunctions,
+and each clause must carry a citation or restate a number the stats tool
+computed — so "Messi scored 7 goals and France won the tournament" does not ride
+to safety on the 7.
+
+A bracket covers the text *before* it, up to the previous bracket, which is how
+prose actually cites. That single rule separates the two shapes: "pressed high
+and defended deep [1]" is covered throughout, "pressed high [1] and France won"
+is not. Numbers are checked separately and against the metric they are claimed
+of, so "18 goals" is wrong even when 18 appears elsewhere in the evidence as a
+date.
+
+What this proves is attribution, not entailment. "France won the tournament [1]"
+passes every check above while passage 1 talks about Morocco; a valid citation
+rank says a claim was attributed, not that the passage agrees with it. So
+`Answer.ok` means the mechanical checks passed, and never means the answer is
+faithful — that is a measurement the evaluation takes with a judge on a
+different provider and model family, not a boolean the writer awards itself.
+
 The judge deliberately defaults to a different provider *and* model family from
 synthesis. LLM judges show a measurable preference for text produced by their
 own family, and letting one model both write and grade an answer would put that
 bias inside every faithfulness number in the report.
+
+---
+
+## The graph
+
+```
+        translate          question -> self-contained English, in one LLM call
+            |
+          route            STAT / TACTICAL / HYBRID, with validated slots
+       +----+----+
+    stats     retrieve     both, concurrently, when the question needs both
+       +----+----+
+        synthesize         cited answer in the asker's language, or an abstention
+```
+
+The nodes in [`graph.py`](src/tactistat/graph.py) are thin wrappers over the
+stage functions in [`pipeline.py`](src/tactistat/pipeline.py) and hold no logic
+of their own, so the routing and evidence contracts live in exactly one place.
+The graph earns its keep on three things a straight-line function cannot do:
+
+**Both tools at once.** A HYBRID question needs a number and prose, and neither
+depends on the other. They share a superstep, so the reported total is wall
+clock rather than the sum.
+
+**Conversation memory.** State is checkpointed per `thread_id`, and the
+translator sees the previous turns, so an elliptical follow-up resolves before
+it reaches the router:
+
+```
+> Messi kiến tạo bao nhiêu lần?      -> How many assists did Lionel Messi ...
+> Còn Mbappé?                        -> How many assists did Kylian Mbappé ...
+```
+
+Memory is opt-in: `pipeline.run(question)` with no `thread_id` is an isolated
+run, because an evaluation reuses one pipeline across unrelated questions and a
+shared default thread would silently feed each answer into the next. An isolated
+run uses a graph with no checkpointer at all, so a 50-question sweep does not
+leave 50 dead conversations behind. `chat` names a thread; `ask` does not, and
+the store is in-process, so a conversation lasts as long as the command.
+
+A turn is remembered only if it passed the evidence checks *and* every tool the
+route asked for returned: a rejected claim would be quoted back as established
+context, and a partial answer would be quoted back without the caveat that made
+it partial. Earlier turns enter the prompt as the human and assistant messages
+they were, never interpolated into the system message — a question typed last
+turn must not inherit system authority this turn. The route node also clears
+the previous turn's tool results, so a follow-up cannot answer from evidence
+that was never retrieved for it.
+
+**Streaming.** `--stream` reports each stage as it finishes.
+
+### Tracing
+
+Every model call is recorded: LangSmith when `LANGSMITH_API_KEY` is set, and a
+local `data/traces/trace.jsonl` otherwise, so a clone with no key still runs and
+still leaves an audit trail. An ablation pass is roughly 900 traces against a
+free tier of 5,000 a month, so `tracing.enabled: false` is the setting for a
+large sweep. This exists because temperature 0 is not a reproduction guarantee:
+explaining a wrong answer by re-running it is not explaining it.
+
+Every backend is a callback attached to the run, LangSmith included. Switching
+LangSmith on the usual way — setting `LANGSMITH_TRACING` in the environment —
+would make tracing a process-wide fact, so a second pipeline built with tracing
+off would silence the first, and an ablation that traces one arm would trace
+them all. Nothing here writes that variable; if the environment already does,
+the run warns rather than quietly ignoring the config.
+
+A trace holds whole prompts and answers, so `data/traces/` is git-ignored, and
+the test suite unsets the key rather than uploading its stand-in models to a
+real project.
 
 ---
 
@@ -216,7 +312,9 @@ src/tactistat/
     index.py          embeddings + FAISS, with the chunk table beside it
     retrieve.py       dense / bm25 / hybrid, optionally reranked
     langchain_tool.py retrieval bound as a structured tool
-  pipeline.py         translate -> route -> tools -> synthesise
+  pipeline.py         the stages, and the result they build
+  graph.py            LangGraph StateGraph over those stages
+  tracing.py          LangSmith when a key exists, a JSONL file otherwise
   llm/
     registry.py       handle -> chat model, with the measured decoding mode
   query_translation/
@@ -365,7 +463,7 @@ manifest would still match a half-written index.
 - [x] Stats tool: minutes, aggregation, per-90 normalisation, query interface
 - [x] RAG tool: section chunking, embeddings, BM25, hybrid retrieval, reranking
 - [x] Query translation, router, cited synthesis, and the `tactistat ask` CLI
-- [ ] LangGraph graph and LangSmith tracing over the same stages
+- [x] LangGraph pipeline: parallel tools, conversation memory, tracing
 - [ ] Evaluation set: 40–50 questions with ground truth
 - [ ] Baseline and ablation study (chunking, embedding model, retrieval, rerank)
 - [ ] Bootstrap confidence intervals for player comparisons

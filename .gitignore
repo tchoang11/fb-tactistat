@@ -14,6 +14,9 @@ data/raw/
 # Vector indexes and embedding caches are rebuildable artifacts.
 data/index/
 data/cache/
+
+# Local traces hold whole prompts and answers; never commit them.
+data/traces/
 *.faiss
 *.npy
 

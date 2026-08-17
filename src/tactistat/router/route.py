@@ -375,7 +375,10 @@ class Router:
         """Classify a question that has already been translated to English."""
         question = (question or "").strip()
         if not question:
-            return Route("TACTICAL", question, self.strategy, repairs=["empty question"])
+            # Keep even the empty-input fallback inside the enabled label set.
+            route = self._validate(RouteDecision(label=FALLBACK_LABELS[0]), question)
+            route.repairs.insert(0, "empty question")
+            return route
         if self.strategy == "keyword":
             return self._validate(self._keyword_decision(question), question)
 

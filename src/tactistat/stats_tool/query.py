@@ -243,6 +243,8 @@ def claimable_values(answer: StatsAnswer) -> dict[str, set[float]]:
     if answer.total is not None:
         values[metric].add(float(answer.total.value))
         values["appearances"].add(float(answer.total.contributors))
+    # Accept the rounded minutes rendered by to_context as evidence too.
+    values["minutes"] |= {float(round(v)) for v in values["minutes"]}
     return {key: {v for v in vals if v == v} for key, vals in values.items() if vals}
 
 
@@ -265,12 +267,22 @@ def run_stats_operation(
     players = players or []
     if operation not in OPERATIONS:
         return StatsAnswer(metric, per90, [], ok=False, note=f"unknown operation {operation!r}")
+    # This is also a public tool, so enforce arity even without the router.
+    if operation == "compare" and len(players) < 2:
+        note = f"compare needs two players, got {len(players)}: {players}"
+        return StatsAnswer(metric, per90, [], ok=False, note=note)
+    if operation == "player" and len(players) != 1:
+        note = f"player lookup needs exactly one player, got {len(players)}: {players}"
+        return StatsAnswer(metric, per90, [], ok=False, note=note)
+    if operation in ("ranking", "total") and players:
+        note = f"{operation} takes no players, got {len(players)}: {players}"
+        return StatsAnswer(metric, per90, [], ok=False, note=note)
 
     if operation == "total":
         answer = engine.total(metric, team=team, **scope)
-    elif operation == "compare" and len(players) >= 2:
+    elif operation == "compare":
         answer = engine.compare(players, metric, per90=per90, **scope)
-    elif operation == "player" and players:
+    elif operation == "player":
         answer = engine.player_metric(players[0], metric, per90=per90, **scope)
     else:
         answer = engine.leaderboard(metric, top_n=top_n, per90=per90, team=team, **scope)

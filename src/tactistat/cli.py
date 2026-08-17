@@ -8,6 +8,7 @@ from tactistat.config import load_config
 from tactistat.data.statsbomb import build_raw_dataset
 from tactistat.data.wikipedia import build_corpus
 from tactistat.pipeline import TactiStatPipeline
+from tactistat.query_translation.translate import STRATEGIES
 from tactistat.rag_tool.index import build_index
 from tactistat.rag_tool.retrieve import MODES, RagRetriever
 from tactistat.stats_tool.aggregate import build_player_matches
@@ -23,12 +24,23 @@ def _check_minutes(config, player_matches) -> bool:
     return over.empty
 
 
-def _ask(config, args) -> int:
-    """Answer a question, and say plainly when the answer failed its checks."""
-    result = TactiStatPipeline(config).run(args.question)
-    if args.trace:
+# User-facing labels for streamed graph nodes.
+NODE_LABEL = {
+    "translate": "understanding the question",
+    "route": "choosing a tool",
+    "stats": "computing statistics",
+    "retrieve": "searching Wikipedia",
+    "synthesize": "writing the answer",
+}
+
+
+def _report(result, trace: bool) -> int:
+    """Print an answer with its caveats, its sources, and an honest exit code."""
+    if trace:
         translation = result.translation
         print(f"[{translation.source_language}/{translation.status}] {translation.query}")
+        if translation.note:
+            print(f"  translation: {translation.note}")
         print(f"{result.route.label} {result.route.stats_args or ''}")
         for query in result.retrieval_queries:
             print(f"  search: {query[:100]}")
@@ -38,8 +50,7 @@ def _ask(config, args) -> int:
 
     for failure in result.tool_failures:
         print(f"! tool failed — {failure}")
-    # An answer that failed its checks is shown, but never as a plain answer:
-    # the CLI is where an unsupported claim would otherwise look authoritative.
+    # Never present rejected text as a verified answer.
     if not result.answer.ok:
         print(f"! UNVERIFIED — {result.answer.note}")
         print("! the text below did not pass the evidence checks\n")
@@ -48,7 +59,7 @@ def _ask(config, args) -> int:
 
     print(result.answer.text)
 
-    # A bracket is only useful if the reader can reach what it points at.
+    # Resolve bracket ranks into usable sources.
     if result.answer.cited and result.rag is not None:
         print("\nSources:")
         by_rank = {passage.rank: passage for passage in result.rag.passages}
@@ -57,6 +68,47 @@ def _ask(config, args) -> int:
             if passage is not None:
                 print(f"  [{rank}] {passage.cite()}\n      {passage.url}")
     return 0 if result.ok else 1
+
+
+# `chat` keeps one in-process thread; `ask` is isolated.
+CHAT_THREAD = "chat"
+
+
+def _chat(config, args) -> int:
+    """Hold a conversation: one thread, so a follow-up resolves against it."""
+    pipeline = TactiStatPipeline(config)
+    print("Ask in Vietnamese or English. Ctrl-D or an empty line to finish.\n")
+    while True:
+        try:
+            question = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if not question:
+            return 0
+        result = _run(pipeline, question, args, thread_id=CHAT_THREAD)
+        _report(result, args.trace)
+        print()
+
+
+def _run(pipeline, question: str, args, thread_id: str | None = None):
+    """Run one question, streaming node progress when asked."""
+    if not getattr(args, "stream", False):
+        return pipeline.run(question, thread_id=thread_id)
+    result = None
+    for node, payload in pipeline.stream(question, thread_id=thread_id):
+        if node == "result":
+            result = payload
+        else:
+            print(f"  … {NODE_LABEL.get(node, node)}")
+    print()
+    return result
+
+
+def _ask(config, args) -> int:
+    """Answer one question on its own; `chat` is where follow-ups belong."""
+    result = _run(TactiStatPipeline(config), args.question, args)
+    return _report(result, args.trace)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -86,16 +138,22 @@ def _parser() -> argparse.ArgumentParser:
     search = commands.add_parser("search", help="retrieve passages from the Wikipedia corpus")
     search.add_argument("query")
     search.add_argument("--top-k", type=int)
-    # Shorthands for the two config keys an ablation sweeps most; both are
-    # applied as ordinary overrides so a run is still described by its config.
+    # Shorthands still become config overrides, keeping runs reproducible.
     search.add_argument("--mode", choices=MODES, help="overrides rag.retrieval.mode")
     search.add_argument("--rerank", action="store_true", help="overrides rag.rerank.enabled")
     search.add_argument("--full", action="store_true", help="print whole passages")
 
     ask = commands.add_parser("ask", help="answer a question end to end")
     ask.add_argument("question")
-    ask.add_argument("--strategy", help="overrides query_translation.strategy")
+    # Reject strategy typos before building models.
+    ask.add_argument("--strategy", choices=STRATEGIES, help="overrides query_translation.strategy")
     ask.add_argument("--trace", action="store_true", help="print each stage's decision")
+    ask.add_argument("--stream", action="store_true", help="show stages as they finish")
+
+    chat = commands.add_parser("chat", help="ask follow-up questions in one conversation")
+    chat.add_argument("--strategy", choices=STRATEGIES, help="overrides query_translation.strategy")
+    chat.add_argument("--trace", action="store_true", help="print each stage's decision")
+    chat.add_argument("--stream", action="store_true", help="show stages as they finish")
 
     stats = commands.add_parser("stats", help="query one structured player statistic")
     stats.add_argument("metric")
@@ -141,6 +199,8 @@ def main() -> int:
         return 0
     if args.command == "ask":
         return _ask(config, args)
+    if args.command == "chat":
+        return _chat(config, args)
     if args.command == "search":
         answer = RagRetriever(config).search(args.query, top_k=args.top_k)
         print(answer.to_context(max_chars=10_000 if args.full else 400))

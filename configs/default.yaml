@@ -38,6 +38,19 @@ llm:
   cache_enabled: true
   cache_dir: data/cache/llm
 
+# --- Tracing --------------------------------------------------------------
+# LangSmith with a key, local JSONL otherwise. Disable for large sweeps; one
+# ablation pass is roughly 900 traces against a 5,000-trace free tier.
+tracing:
+  enabled: true
+  project: tactistat
+  file_dir: data/traces
+
+# --- Conversation ---------------------------------------------------------
+conversation:
+  # Turns used to resolve follow-ups such as "what about Mbappe?".
+  history_turns: 2
+
 # --- Query translation --------------------------------------------------------
 # Users write Vietnamese or English, often as a fragment; the corpus is English
 # only, so an untranslated question retrieves nothing. Disabling this is the

@@ -1,15 +1,10 @@
-"""Wire translation, routing, the two tools and synthesis into one answer.
-
-Deliberately a plain function pipeline: each stage is separately testable, and
-the LangGraph graph wraps these same stages as nodes rather than reimplementing
-them.
-"""
+"""Implement the stages wrapped by the LangGraph pipeline."""
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import uuid4
 
 from tactistat.config import Config
 from tactistat.query_translation.translate import QueryTranslator, TranslatedQuery
@@ -22,6 +17,7 @@ from tactistat.stats_tool.query import (
     run_stats_operation,
 )
 from tactistat.synthesis.synthesize import Answer, Synthesizer
+from tactistat.tracing import configure_tracing
 
 
 @dataclass
@@ -40,12 +36,7 @@ class PipelineResult:
 
     @property
     def status(self) -> str:
-        """ok | partial | failed.
-
-        A HYBRID question that lost one branch was answered from half the
-        evidence it asked for; reporting that as success would let the
-        evaluation count it alongside answers that had everything.
-        """
+        """Return partial when a valid answer used only part of its routed evidence."""
         if not self.answer.ok:
             return "failed"
         return "partial" if self.tool_failures else "ok"
@@ -70,16 +61,10 @@ class PipelineResult:
 
 
 def retrieval_queries_for(route: Route, translation: TranslatedQuery) -> list[str]:
-    """Decide what the RAG tool actually searches for.
+    """Preserve the translation ablation when choosing RAG queries.
 
-    The translation strategy is an ablation axis, so it owns this decision: if
-    the router's own phrasing replaced the `off` arm's literal translation, the
-    arms would retrieve identically and the axis would measure nothing.
-
-    When translation is *disabled* the raw question is used verbatim, because
-    the router's rewrite is itself an LLM translation and would quietly restore
-    the step the baseline arm exists to remove. A translation *failure* may fall
-    back to the router, and `translation.status` records which happened.
+    Disabled translation uses the raw question; failures may use the router's
+    fallback. Otherwise the selected strategy owns retrieval.
     """
     if route.rag_query is None:
         return []
@@ -110,6 +95,9 @@ class TactiStatPipeline:
         self.synthesizer = synthesizer or Synthesizer(config)
         # The keyword baseline needs team names to avoid calling a country a player.
         self.router = router or Router(config, known_teams=self._team_names())
+        self.callbacks = configure_tracing(config)
+        self._graph = None
+        self._conversation = None
 
     def _team_names(self) -> set[str]:
         try:
@@ -148,57 +136,101 @@ class TactiStatPipeline:
             note = f"rag tool raised {type(exc).__name__}: {exc}"
             return RagAnswer(queries[0], "unknown", False, ok=False, note=note)
 
-    def run(self, question: str) -> PipelineResult:
-        """Answer one question, recording what each stage decided."""
-        timings: dict[str, int] = {}
+    def translate(self, question: str, history: list[dict] | None = None):
+        return self.translator.translate(question, history=history or None)
 
-        def timed(name: str, work):
-            started = time.perf_counter()
-            try:
-                return work()
-            finally:
-                timings[name] = int((time.perf_counter() - started) * 1000)
+    def route(self, query: str) -> Route:
+        return self.router.route(query)
 
-        translation = timed("translate", lambda: self.translator.translate(question))
-        route = timed("route", lambda: self.router.route(translation.query))
+    def retrieval_queries(self, route: Route, translation: TranslatedQuery) -> list[str]:
+        return retrieval_queries_for(route, translation)
 
-        stats: StatsAnswer | None = None
-        if route.needs_stats:
-            stats = timed("stats", lambda: self._run_stats(route))
+    def run_stats(self, route: Route) -> StatsAnswer:
+        return self._run_stats(route)
 
-        rag: RagAnswer | None = None
-        queries = retrieval_queries_for(route, translation)
-        if queries:
-            rag = timed("retrieve", lambda: self._run_rag(queries))
+    def run_rag(self, queries: list[str]) -> RagAnswer:
+        return self._run_rag(queries)
 
-        # A tool that refused is not evidence: its "no result" line would
-        # otherwise be summarised into a confident answer.
+    def synthesize(
+        self,
+        question: str,
+        translation: TranslatedQuery,
+        route: Route,
+        stats: StatsAnswer | None,
+        rag: RagAnswer | None,
+    ) -> Answer:
+        """Exclude refused tool output from synthesis evidence."""
+        return self.synthesizer.answer(
+            question,
+            stats_context=stats.to_context() if stats is not None and stats.ok else None,
+            rag_context=rag.to_context() if rag is not None and rag.ok else None,
+            n_passages=len(rag.passages) if rag is not None and rag.ok else 0,
+            language=translation.source_language,
+            stats_claims=claimable_values(stats) if stats is not None else None,
+        )
+
+    @property
+    def history_limit(self) -> int:
+        """Never keep fewer turns than the translator is configured to read."""
+        from tactistat.graph import HISTORY_LIMIT
+
+        return max(HISTORY_LIMIT, self.translator.history_turns)
+
+    def _compiled(self, thread_id: str | None):
+        """Use an isolated graph unless the caller explicitly names a conversation."""
+        from tactistat.graph import build_graph, new_checkpointer
+
+        invoke_config: dict[str, Any] = {
+            "callbacks": self.callbacks,
+            "run_name": "tactistat.ask",
+            "metadata": {"tactistat_run_id": uuid4().hex},
+        }
+        if thread_id is None:
+            if self._graph is None:
+                self._graph = build_graph(self, history_limit=self.history_limit)
+            return self._graph, invoke_config
+
+        if self._conversation is None:
+            self._conversation = build_graph(
+                self, checkpointer=new_checkpointer(), history_limit=self.history_limit
+            )
+        invoke_config["configurable"] = {"thread_id": thread_id}
+        invoke_config["metadata"]["thread_id"] = thread_id
+        return self._conversation, invoke_config
+
+    def run(self, question: str, thread_id: str | None = None) -> PipelineResult:
+        """Answer one question. Pass a thread_id to continue a conversation."""
+        graph, invoke_config = self._compiled(thread_id)
+        return self._result(question, graph.invoke({"question": question}, invoke_config))
+
+    def stream(self, question: str, thread_id: str | None = None):
+        """Yield (node, state) as each stage finishes, then the final result."""
+        graph, invoke_config = self._compiled(thread_id)
+        # Isolated graphs have no checkpoint to read after streaming.
+        final: dict[str, Any] = {}
+        for update in graph.stream({"question": question}, invoke_config, stream_mode="updates"):
+            for node, payload in update.items():
+                final.update(payload)
+                yield node, payload
+        yield "result", self._result(question, final)
+
+    def _result(self, question: str, state: dict[str, Any]) -> PipelineResult:
+        from tactistat.graph import timings_from
+
+        stats, rag = state.get("stats"), state.get("rag")
         failures = [
             f"{name}: {result.note}"
             for name, result in (("stats", stats), ("rag", rag))
             if result is not None and not result.ok
         ]
-        # Answer the question as it was asked, in the language it was asked in.
-        answer = timed(
-            "synthesize",
-            lambda: self.synthesizer.answer(
-                question,
-                stats_context=stats.to_context() if stats is not None and stats.ok else None,
-                rag_context=rag.to_context() if rag is not None and rag.ok else None,
-                n_passages=len(rag.passages) if rag is not None and rag.ok else 0,
-                language=translation.source_language,
-                stats_claims=claimable_values(stats) if stats is not None else None,
-            ),
-        )
-        timings["total"] = sum(v for k, v in timings.items() if k != "total")
         return PipelineResult(
             question=question,
-            translation=translation,
-            route=route,
-            answer=answer,
+            translation=state["translation"],
+            route=state["route"],
+            answer=state["answer"],
             stats=stats,
             rag=rag,
-            retrieval_queries=queries,
+            retrieval_queries=state.get("retrieval_queries") or [],
             tool_failures=failures,
-            timings_ms=timings,
+            timings_ms=timings_from(state),
         )

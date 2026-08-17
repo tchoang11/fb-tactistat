@@ -463,3 +463,38 @@ def test_a_squad_total_credits_the_own_goals_it_benefited_from(engine, team, goa
     assert (answer.total.value, answer.total.own_goals) == (goals, own)
     # The note exists only where an own goal actually contributed.
     assert ("own goal" in (answer.note or "")) is bool(own)
+
+
+@pytest.mark.parametrize(
+    ("operation", "players", "expected"),
+    [
+        ("compare", ["Lionel Messi"], "compare needs two players"),
+        ("compare", [], "compare needs two players"),
+        ("player", [], "player lookup needs exactly one player"),
+        ("player", ["Lionel Messi", "Kylian Mbappé"], "exactly one player"),
+        ("ranking", ["Lionel Messi"], "ranking takes no players"),
+        ("total", ["Lionel Messi"], "total takes no players"),
+    ],
+)
+def test_the_dispatcher_refuses_a_wrong_player_count(engine, operation, players, expected):
+    """It is also the public LangChain tool: a bad call must not become a leaderboard.
+
+    Falling through returned Mbappe's name at the top of a top-five list to a
+    caller who asked about Messi, and reported ok=True while doing it.
+    """
+    from tactistat.stats_tool.query import run_stats_operation
+
+    answer = run_stats_operation(engine, operation=operation, metric="goals", players=players)
+    assert answer.ok is False and expected in answer.note
+    assert answer.rows == []
+
+
+def test_the_dispatcher_still_answers_a_well_formed_call(engine):
+    from tactistat.stats_tool.query import run_stats_operation
+
+    compared = run_stats_operation(
+        engine, operation="compare", metric="goals", players=["Lionel Messi", "Kylian Mbappé"]
+    )
+    assert compared.ok is True and len(compared.rows) == 2
+    ranked = run_stats_operation(engine, operation="ranking", metric="goals", top_n=3)
+    assert ranked.ok is True and len(ranked.rows) == 3
