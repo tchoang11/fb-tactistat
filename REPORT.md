@@ -7,8 +7,9 @@ and do not support.
 
 Every table below is read from a committed artifact, named under the table, and
 every artifact is in this repository rather than on the machine that produced
-it. Each per-axis comparison embeds the full effective configuration it ran
-against, so any arm is reconstructible as that base plus its own overrides. The
+it; every figure is drawn from those artifacts by `scripts/04_plot_results.py`.
+Each per-axis comparison embeds the full effective configuration it ran against,
+so any arm is reconstructible as that base plus its own overrides. The
 per-item half — every score, every guard note, every judge rationale, and which
 passage came back at which rank — is committed under `eval/results/runs/`. What
 is deliberately not committed is the retrieved passage text and the rendered
@@ -147,9 +148,11 @@ model load charged to the first item.
 trades well depends on the budget around it: against a multi-second synthesis
 call it disappears, and as a standalone retrieval service it is an order of
 magnitude. The absolute numbers wander by a millisecond or two between sweeps
-and the ratio does not, which is the part worth quoting. It is not the largest retrieval gain in the study — swapping the
-query-translation strategy from `rewrite` to a literal translation is worth
-+0.113 MRR (§6) at no measured retrieval-latency cost. Whether it costs anything
+and the ratio does not, which is the part worth quoting. It is not the largest
+retrieval gain in the study: a larger encoder from the same family is worth
++0.194 MRR (§3.5) for 4 ms of p50, and swapping the
+query-translation strategy from `rewrite` to a literal translation +0.113 MRR
+(§6) at no measured retrieval-latency cost. Whether the latter costs anything
 end to end is a different question: the translation strategies differ in how
 many model calls they make, and this study does not time those.
 
@@ -204,6 +207,42 @@ means every absolute number in §3 is conditioned on one draw of the translator.
 §6.1 measures that draw's variance directly by rerunning with the cache off: the
 shipped `rewrite` strategy moves 0.023 MRR between draws. Differences *within*
 an axis are exact; the level they sit at is one sample.
+
+### 3.5 Embedding model
+
+| arm | MRR | R@1 | R@3 | R@5 | retrieval p50 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `bge-base` | **0.410** | **0.317** | 0.433 | 0.594 | 15 ms |
+| `bge-large` | 0.406 | 0.233 | **0.533** | **0.628** | 35 ms |
+| `bge-small` (shipped) | 0.216 | 0.067 | 0.333 | 0.500 | 11 ms |
+
+`eval/results/ablations/embedding.json`
+
+This axis was run after the rest of the study, against the same cached
+upstream draw, and it holds the largest retrieval gain in it. The three arms are
+one model family with one tokenizer and one 512-token window, so the chunk table
+is byte-identical across them and only the vectors differ. The `bge-small` arm
+is the shipped configuration reached from a fifth sweep, and it returns MRR
+0.216111 and Recall@5 0.500000 like the four in §3.4.
+
+**Moving from bge-small to bge-base nearly doubles MRR, +0.194, for 4 ms of p50
+retrieval latency.** The gain is at the top of the ranking: bge-base places the
+labelled passage first on 8 items where bge-small does not, and the reverse
+never happens. bge-large buys more recall further down the list, Recall@5 0.628
+against 0.594, gives back some of the rank-1 hits, and costs more than twice the
+latency again. On 30 items the two larger arms are not separable from each
+other; both are separable from the small one, by six one-item steps of 0.033.
+
+That is a stronger lever than the reranker (+0.087 MRR at 12× the latency, §3.2)
+or the translation strategy (+0.113 MRR, §6), and it is cheaper than either: a
+110M-parameter encoder on a laptop CPU. It was not promoted to the default, for
+the same reason nothing else in this report was — every other axis here is
+conditioned on the small model's vectors, and switching the base would
+invalidate the comparisons above rather than extend them. It is the first change
+the next iteration should make, followed by a rerun of the whole study on top of
+it.
+
+![Retrieval ablations: MRR and Recall@5 for every arm of every axis](eval/results/figures/retrieval_ablations.png)
 
 ---
 
@@ -282,6 +321,8 @@ every interval with noise the tournament never had.
 `eval/results/bootstrap.json`, reproduced by
 `tactistat bootstrap goals "Kylian Mbappe" "Lionel Messi" "Olivier Giroud" "Julian Alvarez"`.
 
+![Bootstrap intervals for the four leading scorers and every pair](eval/results/figures/bootstrap_intervals.png)
+
 **Pairing does not mean narrower. It means conditional on what happened.**
 Var(L − R) is Var(L) + Var(R) − 2 Cov(L, R), and the paired draw is what lets the
 covariance term exist at all. For the three one-shared pairs the interval
@@ -350,7 +391,8 @@ matched its label exactly. Two items needed a router repair, and the repair held
 Every failure is downstream of a retrieved passage. Recall@5 is 0.500: half the
 labelled sections never reach the synthesiser, and the four abstentions are the
 system reporting that honestly rather than filling the gap. §3 is where the
-remaining work is, and §3.2 says a reranker is the cheapest part of it.
+remaining work is: §3.5 says a larger encoder is the biggest single part of it,
+and §3.2 that a reranker is the next.
 
 ### 5.2 The guard is stricter than correctness, in a specific way
 
@@ -379,12 +421,18 @@ but it rejects answers that are 93% correct. The 14 rejections break down as:
   it collects a second, misleading "uncited claim" note for the same root cause.
 - **5 — genuinely uncited prose.** A sentence of explanation with no bracket.
   This is the class the guard exists for, and it is 11% of the set, not 40%.
-- **1 — a number claimed of a metric the tool never computed.**
+- **1 — a number claimed of a metric the tool never computed.** The answer
+  says *Modrić đã hoàn thành 463 đường chuyền* — completed 463 passes — and the
+  guard's lexicon reads a bare *đường chuyền* as passes attempted, which the
+  tool had not computed; 463 is the tool's own completed-passes figure. That is
+  a false positive of the surface lexicon, not a wrong number.
 
 The 45 items decompose without overlap. 31 pass the mechanical checks — 27
 answered and passed, plus the 4 abstentions, which assert nothing and so pass by
 construction — and 14 are rejected: 8 for spelling a correct number as a word, 5
-for genuinely uncited prose, 1 for a metric the tool never computed.
+for genuinely uncited prose, 1 for a metric the tool never computed. None of the
+14 was rejected for a figure the tool did not compute: the "number not found in
+the evidence" note never fires on this set.
 
 `pipeline_success` is 0.600 rather than 0.689 because it requires an answer as
 well as valid evidence, so it counts the 4 abstentions as misses. Neither number
@@ -431,6 +479,15 @@ regex-and-vocabulary decision instead of a few-shot model call. Both arms, all
 
 `eval/results/ablations/router.json`, per-item in `eval/results/runs/` —
 `…105455541462Z` for `few_shot` and `…105504261464Z` for `keyword`.
+
+![Router ablation: every metric for the few-shot router and the keyword baseline](eval/results/figures/router_ablation.png)
+
+One of the keyword arm's 11 abstentions is a blank reply: the synthesis model
+returned no text, the guard scored it as too short to be a claim, and the LLM
+cache then held that blank. The cache has since been changed to skip blank
+generations, so a rerun of this arm re-asks that one item live and its numbers
+move by one item; the few-shot arm reproduces from the cache to every digit. The
+table stands as measured.
 
 The few-shot router earns its model call: 8 of 45 questions get the wrong label
 without it and 13 get the wrong slots, and that propagates — 8 of 30 stats
@@ -682,6 +739,12 @@ goals, not smoothly.
 so a bad moment there is correlated across two of the five stages rather than
 independent.
 
+**The strongest lever was found last, and the default was not moved.** §3.5
+was run after every other axis, and a base-sized encoder nearly doubles MRR on
+the same items. Every other number in §3, §5 and §6 is conditioned on the small
+encoder's vectors, so promoting it would have meant rerunning the study rather
+than amending it. That rerun is the next iteration's first task.
+
 **The set is thin where the pipeline is weakest.** 19 of 30 stats items ask for
 `goals`; there is one `per90` item, three `ranking`, three `compare`, and one
 `opponent`. Those are the slots the router repairs most often, and three
@@ -699,6 +762,8 @@ tactistat ablate retrieval_mode             # section 3.1
 tactistat ablate rerank                     # section 3.2
 tactistat ablate chunking                   # section 3.3
 tactistat ablate translation                # section 6
+tactistat ablate embedding                  # section 3.5; builds three indexes, ~15 min on a laptop CPU
+python scripts/04_plot_results.py           # every figure in this report, from the artifacts above
 
 # Section 4: writes eval/results/bootstrap.json with both estimators, the seed,
 # the resample count, and the match ids behind every interval

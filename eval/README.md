@@ -25,7 +25,8 @@ note, judge rationale and passage rank survives, which is what a table in
 [`REPORT.md`](../REPORT.md) has to be recheckable against by someone who only
 cloned the repository. Per-axis comparisons go to `eval/results/ablations/`,
 tracked, each carrying the full effective base config so any arm can be
-reconstructed as base plus overrides.
+reconstructed as base plus overrides. `eval/results/figures/` is drawn from
+those artifacts by `scripts/04_plot_results.py` and never edited by hand.
 
 Every run writes one, at roughly 340 KB for the 45-item set. That is a file, not
 a commit: track the runs a published table cites and leave the rest local.
