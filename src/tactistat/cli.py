@@ -133,6 +133,7 @@ EVAL_COUNTERS = (
 _AXIS_NAMES = (
     "baseline",
     "chunking",
+    "embedding",
     "retrieval_mode",
     "rerank",
     "router",

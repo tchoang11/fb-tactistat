@@ -602,3 +602,12 @@ def test_a_bare_output_filename_joins_the_other_reports(config, tmp_path, monkey
     assert _destination(config, axis, "somewhere/foo.json").name == "foo.json"
     assert _destination(config, axis, tmp_path / "x.json") == tmp_path / "x.json"
     assert ablate  # imported for the registry the axis came from
+
+
+def test_the_embedding_axis_changes_only_the_encoder():
+    """Same family, tokenizer and window, so the chunks are identical across arms."""
+    axis = AXES["embedding"]
+    assert axis.rebuilds_index
+    assert all(set(arm.overrides) == {"rag.embedding.model"} for arm in axis.arms)
+    models = {arm.overrides["rag.embedding.model"] for arm in axis.arms}
+    assert len(models) == len(axis.arms)

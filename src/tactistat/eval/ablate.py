@@ -73,6 +73,19 @@ AXES: dict[str, Axis] = {
         ),
         rebuilds_index=True,
     ),
+    "embedding": Axis(
+        name="embedding",
+        mode="retrieval",
+        question="Does a larger encoder from the same family retrieve better than bge-small?",
+        # One family, one tokenizer, one 512-token window, so the chunks are
+        # byte-identical across arms and only the vectors change.
+        arms=(
+            Arm("bge-small", {"rag.embedding.model": "BAAI/bge-small-en-v1.5"}),
+            Arm("bge-base", {"rag.embedding.model": "BAAI/bge-base-en-v1.5"}),
+            Arm("bge-large", {"rag.embedding.model": "BAAI/bge-large-en-v1.5"}),
+        ),
+        rebuilds_index=True,
+    ),
     "retrieval_mode": Axis(
         name="retrieval_mode",
         mode="retrieval",
