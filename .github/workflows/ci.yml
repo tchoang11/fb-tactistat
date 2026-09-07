@@ -23,12 +23,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-
-      - name: Cache Hugging Face tokenizers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: hf-${{ runner.os }}-bge-small-en-v1.5
+          # There is no requirements.txt; without this the pip cache step fails the job.
+          cache-dependency-path: pyproject.toml
 
       - name: Install
         run: |
