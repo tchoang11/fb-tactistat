@@ -1,0 +1,51 @@
+{
+  "title": "tactistat — 2022 World Cup: computed numbers, cited prose, in Vietnamese or English",
+  "scenes": [
+    {
+      "steps": [
+        {
+          "prompt": "$ ",
+          "input": "tactistat ask \"Messi ghi bao nhiêu bàn ở World Cup 2022?\" --trace",
+          "output": "[vi/translated] How many goals did Lionel Messi score in the 2022 FIFA World Cup?\nSTAT {'operation': 'player', 'metric': 'goals', 'players': ['Lionel Messi'], 'per90': False, 'top_n': 5, 'team': None, 'stage': None, 'opponent': None}\n  {'translate': 733, 'route': 554, 'stats': 2, 'synthesize': 6, 'total': 1295}\n\nLionel Messi đã ghi **7 bàn** trong toàn bộ World Cup 2022. Đây là tổng số bàn thắng của anh trong 7 trận thi đấu."
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "prompt": "$ ",
+          "input": "tactistat ask \"Why was Morocco so hard to break down at the 2022 World Cup?\"",
+          "output": "Morocco’s defensive organization kept opponents from scoring in several key matches, holding Croatia and Spain to 0‑0 draws and beating Belgium 2‑0 in the group stage[2]. Their goalkeeper Yassine Bounou made crucial saves, including two penalties in the round‑of‑16 shoot‑out against Spain[2]. This combination of disciplined defending and decisive goalkeeping helped them become the first African and Arab team to reach a World Cup semi‑final[1][2].\n\nSources:\n  [1] Morocco national football team — Introduction (rev 1367935934)\n      https://en.wikipedia.org/wiki/Morocco_national_football_team\n  [2] Morocco national football team — 2021–2026: Comeback (rev 1367935934)\n      https://en.wikipedia.org/wiki/Morocco_national_football_team"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "prompt": "$ ",
+          "input": "tactistat stats goals \"Lionel Messi\" \"Kylian Mbappe\" --per90",
+          "output": "STATS TOOL — goals per 90 (computed from configured event data)\n  Kylian Mbappé Lottin (France): 1.21 [597 min, 7 apps], 95% CI 0.43 to 1.86\n  Lionel Andrés Messi Cuccittini (Argentina): 0.91 [690 min, 7 apps], 95% CI 0.55 to 1.20\n  difference: 0.29, 95% CI -0.34 to 0.93 (10000 resamples of 13 matches, 1 of them shared); the interval spans zero, so these matches cannot separate them\n  matches for Kylian Mbappé Lottin:\n    2022-12-18  Argentina 3-3 France (Final): 3 in 120 min\n    2022-11-26  France 2-1 Denmark (Group Stage): 2 in 90 min\n    2022-12-04  France 3-1 Poland (Round of 16): 2 in 90 min\n    2022-11-22  France 4-1 Australia (Group Stage): 1 in 90 min\n    ... and 3 more\n  matches for Lionel Andrés Messi Cuccittini:\n    2022-12-18  Argentina 3-3 France (Final): 2 in 120 min\n    2022-11-22  Argentina 1-2 Saudi Arabia (Group Stage): 1 in 90 min\n    2022-11-26  Argentina 2-0 Mexico (Group Stage): 1 in 90 min\n    2022-12-03  Argentina 2-1 Australia (Round of 16): 1 in 90 min\n    ... and 3 more"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "prompt": "$ ",
+          "input": "tactistat chat --trace",
+          "output": "Ask in Vietnamese or English. Ctrl-D or an empty line to finish."
+        },
+        {
+          "prompt": "> ",
+          "input": "Messi ghi bao nhiêu bàn ở World Cup 2022?",
+          "output": "[vi/translated] How many goals did Lionel Messi score in the 2022 FIFA World Cup?\nSTAT {'operation': 'player', 'metric': 'goals', 'players': ['Lionel Messi'], 'per90': False, 'top_n': 5, 'team': None, 'stage': None, 'opponent': None}\n  {'translate': 723, 'route': 541, 'stats': 2, 'synthesize': 5, 'total': 1271}\n\nLionel Messi đã ghi **7 bàn** trong toàn bộ World Cup 2022. Đây là tổng số bàn thắng của anh trong 7 trận thi đấu."
+        },
+        {
+          "prompt": "> ",
+          "input": "Còn Mbappé?",
+          "output": "[vi/translated] How many goals did Kylian Mbappé score in the 2022 FIFA World Cup?\nSTAT {'operation': 'player', 'metric': 'goals', 'players': ['Kylian Mbappé'], 'per90': False, 'top_n': 5, 'team': None, 'stage': None, 'opponent': None}\n  {'translate': 1138, 'route': 1, 'stats': 1, 'synthesize': 0, 'total': 1140}\n\nKylian Mbappé ghi được **8.00** bàn thắng trong toàn bộ giải World Cup 2022. Anh đã ra sân **7** trận, tổng cộng **597** phút thi đấu. Các bàn thắng của anh bao gồm 3 bàn trong trận chung kết và các bàn khác ở vòng bảng và vòng loại vòng 16."
+        }
+      ]
+    }
+  ]
+}
