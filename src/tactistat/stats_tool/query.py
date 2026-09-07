@@ -11,6 +11,7 @@ import pandas as pd
 from tactistat.artifacts import (
     manifest_matches,
     read_manifest,
+    stable_hash,
     write_json_atomic,
     write_parquet_atomic,
 )
@@ -30,6 +31,14 @@ from tactistat.stats_tool.aggregate import (
     build_team_own_goals,
     check_configured_metrics,
 )
+from tactistat.stats_tool.bootstrap import (
+    Interval,
+    bootstrap_settings,
+    difference_interval,
+)
+from tactistat.stats_tool.bootstrap import (
+    per90_interval as _per90_interval,
+)
 
 PLAYER_MATCHES_FILE = "player_matches.parquet"
 PLAYER_TOTALS_FILE = "player_totals.parquet"
@@ -45,6 +54,7 @@ STATS_SCHEMA_VERSION = 2
 
 # The operations the router may ask for; mirrored in router/route.py.
 OPERATIONS = ("player", "ranking", "compare", "total")
+DERIVED_CLAIMS_KEY = "__derived__"
 
 
 # Result models
@@ -120,6 +130,15 @@ class StatsAnswer:
     # What the number was filtered to. Without it synthesis cannot tell a
     # tournament total from one scoped to a single fixture.
     scope: str | None = None
+    # Per-90 rates over a handful of matches carry real sampling error, so a
+    # comparison reports the interval alongside the point estimate. Only rates
+    # get one: an interval around a raw total would describe a tournament that
+    # was not played.
+    intervals: dict[str, Interval] = field(default_factory=dict)
+    difference: Interval | None = None
+    # The tool ran and had nothing to report, or the tool did not run. Synthesis
+    # refuses either way; evaluation must not score the second as a wrong answer.
+    failed: bool = False
 
     def to_context(self, max_evidence: int = 8) -> str:
         """Render the structured result as plain text for synthesis."""
@@ -136,9 +155,28 @@ class StatsAnswer:
             lines.append(f"  {self.total.describe(self.metric)}")
         for row in self.rows:
             value = f"{row.value:.2%}" if self.metric == "pass_accuracy" else f"{row.value:.2f}"
-            lines.append(
+            line = (
                 f"  {row.player_name} ({row.team}): {value} "
                 f"[{row.minutes:.0f} min, {row.appearances} apps]"
+            )
+            interval = self.intervals.get(row.player_name)
+            if interval is not None:
+                line += f", {interval.label} CI {interval.low:.2f} to {interval.high:.2f}"
+            lines.append(line)
+        if self.difference is not None:
+            gap = self.difference
+            verdict = (
+                "the gap is larger than sampling error"
+                if gap.excludes_zero()
+                else "the interval spans zero, so these matches cannot separate them"
+            )
+            # Naming the shared fixtures says the two schedules were paired,
+            # not pooled -- otherwise the match count reads like a double count.
+            shared = f", {gap.n_shared} of them shared" if gap.n_shared else ""
+            lines.append(
+                f"  difference: {gap.point:.2f}, {gap.label} CI "
+                f"{gap.low:.2f} to {gap.high:.2f} "
+                f"({gap.n_resamples} resamples of {gap.n_matches} matches{shared}); {verdict}"
             )
         if self.note:
             lines.append(f"  note: {self.note}")
@@ -223,6 +261,144 @@ def build_stats_tables(config: Config) -> dict[str, object]:
     }
 
 
+def bootstrap_artifact(
+    config: Config,
+    players: list[str],
+    metric: str = "goals",
+    *,
+    engine: StatsQueryEngine | None = None,
+) -> dict[str, object]:
+    """Every interval behind a published comparison, and its inputs.
+
+    A confidence interval is a number produced by a seed, a resample count and a
+    specific set of fixtures. Publishing the interval without those is
+    publishing a number nobody can check, so this writes all of them — including
+    the match ids each player's draw was taken over — alongside both estimators,
+    paired and independent, for every pair among `players`.
+    """
+    from itertools import combinations
+
+    engine = engine or StatsQueryEngine(config)
+    n_resamples, confidence, seed = bootstrap_settings(config)
+    # A per-90 of a ratio is not a rate: summing per-match pass accuracy and
+    # dividing by minutes produces a number with no referent, and the engine
+    # refuses it. `minutes` is worse — it would report 90.00 [90.00, 90.00].
+    if metric not in engine.per90_metrics:
+        allowed = ", ".join(sorted(engine.per90_metrics))
+        raise ValueError(f"per-90 is not available for metric {metric!r}; choose one of {allowed}")
+    if metric not in engine.player_matches.columns:
+        raise ValueError(f"{metric!r} is not a match-level column")
+
+    resolved: dict[str, dict[str, object]] = {}
+    seen: dict[int, str] = {}
+    for name in players:
+        resolution = engine.resolve_player(name)
+        if resolution.status != "ok":
+            raise ValueError(f"cannot resolve {name!r}: {resolution.status}")
+        player_id = int(resolution.player_id)
+        if player_id in seen:
+            # Two aliases of one player would otherwise be compared against
+            # themselves and published as a zero-width interval.
+            raise ValueError(
+                f"{name!r} and {seen[player_id]!r} are the same player ({resolution.player_name})"
+            )
+        seen[player_id] = name
+        frame = engine._match_rows(player_id, None)
+        minutes = float(frame["minutes"].sum())
+        # The engine refuses a per-90 below this threshold, so an artifact that
+        # published one anyway would contain a number the system will not state.
+        eligible = minutes >= engine.min_minutes
+        interval = (
+            _per90_interval(
+                frame, metric, n_resamples=n_resamples, confidence=confidence, seed=seed
+            ).to_dict()
+            if eligible
+            else None
+        )
+        # The match ids alone say which fixtures were drawn but not what they
+        # contributed, so the interval is not recomputable from the artifact.
+        per_match = [
+            {
+                "match_id": int(row.match_id),
+                metric: float(getattr(row, metric)),
+                "minutes": float(row.minutes),
+            }
+            for row in frame.sort_values("match_id").itertuples()
+        ]
+        resolved[name] = {
+            "query": name,
+            "player_id": player_id,
+            "player_name": resolution.player_name,
+            "match_ids": [entry["match_id"] for entry in per_match],
+            "matches": per_match,
+            "minutes": minutes,
+            "total": float(frame[metric].sum()),
+            "per90": float(frame[metric].sum() * 90.0 / minutes) if minutes else None,
+            "eligible": eligible,
+            "ineligible_reason": (
+                None
+                if eligible
+                else f"{minutes:g} minutes is below the {engine.min_minutes}-minute threshold"
+            ),
+            "interval": interval,
+            "_frame": frame,
+        }
+
+    pairs = []
+    for left, right in combinations(players, 2):
+        if not (resolved[left]["eligible"] and resolved[right]["eligible"]):
+            continue
+        left_ids = set(resolved[left]["match_ids"])
+        right_ids = set(resolved[right]["match_ids"])
+        kwargs = {"n_resamples": n_resamples, "confidence": confidence, "seed": seed}
+        pairs.append(
+            {
+                "left": resolved[left]["player_name"],
+                "right": resolved[right]["player_name"],
+                "shared_match_ids": sorted(left_ids & right_ids),
+                "paired": difference_interval(
+                    resolved[left]["_frame"], resolved[right]["_frame"], metric, **kwargs
+                ).to_dict(),
+                "independent": difference_interval(
+                    resolved[left]["_frame"],
+                    resolved[right]["_frame"],
+                    metric,
+                    paired=False,
+                    **kwargs,
+                ).to_dict(),
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "artifact": "bootstrap_intervals",
+        "metric": metric,
+        "per90": True,
+        "settings": {
+            "n_resamples": n_resamples,
+            "confidence_level": confidence,
+            "seed": seed,
+            "resampling_unit": "match",
+        },
+        # The manifest hashes the competition, season and schema version — it
+        # does not change when the parquet behind them is rebuilt differently.
+        # The second hash covers the numbers this artifact actually resampled.
+        "dataset_fingerprint": stable_hash(stats_manifest(config)),
+        "matches_fingerprint": stable_hash(
+            [
+                [entry["player_id"], entry["matches"]]
+                for entry in sorted(resolved.values(), key=lambda e: e["player_id"])
+            ]
+        ),
+        "min_minutes_for_per90": engine.min_minutes,
+        "players": [
+            {key: value for key, value in entry.items() if key != "_frame"}
+            for entry in resolved.values()
+        ],
+        "pairs": pairs,
+    }
+
+
 def claimable_values(answer: StatsAnswer) -> dict[str, set[float]]:
     """The numbers an answer may assert of each metric, from the result itself.
 
@@ -243,6 +419,29 @@ def claimable_values(answer: StatsAnswer) -> dict[str, set[float]]:
     if answer.total is not None:
         values[metric].add(float(answer.total.value))
         values["appearances"].add(float(answer.total.contributors))
+    # Interval bounds are rendered as evidence, so an answer may quote them.
+    # Without this the guard would reject the very numbers the tool printed.
+    for interval in answer.intervals.values():
+        values[metric].update({float(interval.low), float(interval.high)})
+    if answer.difference is not None:
+        gap = answer.difference
+        values[metric].update({float(gap.point), float(gap.low), float(gap.high)})
+    # Player rows expose two decimals to synthesis, including rounded xG/per-90.
+    computed = set(values[metric])
+    values[metric] |= {round(value, 2) for value in computed}
+    if metric == "pass_accuracy":
+        # Rows render as 82.48% and match evidence as 82.5%, not as 0.8248.
+        values[metric] |= {round(value * 100, digits) for value in computed for digits in (1, 2)}
+    if len(answer.rows) == 2:
+        # A comparison may state the exact gap between its two displayed
+        # values. Keep it separate so synthesis permits this deterministic
+        # derivation without accepting arbitrary arithmetic over evidence.
+        left, right = (float(row.value) for row in answer.rows)
+        if metric == "pass_accuracy":
+            left, right = round(left * 100, 2), round(right * 100, 2)
+        gap = round(abs(left - right), 2)
+        values[metric].add(gap)
+        values[DERIVED_CLAIMS_KEY] = {gap}
     # Accept the rounded minutes rendered by to_context as evidence too.
     values["minutes"] |= {float(round(v)) for v in values["minutes"]}
     return {key: {v for v in vals if v == v} for key, vals in values.items() if vals}
@@ -782,4 +981,38 @@ class StatsQueryEngine:
             ),
         )
         rows.sort(key=lambda row: row.value, reverse=True)
-        return StatsAnswer(metric, per90, rows, evidence=evidence, note=note)
+        answer = StatsAnswer(metric, per90, rows, evidence=evidence, note=note)
+        if per90:
+            self._attach_intervals(answer, metric, scoped_ids)
+        return answer
+
+    def _attach_intervals(
+        self, answer: StatsAnswer, metric: str, scoped_ids: set[int] | None
+    ) -> None:
+        """Bound each rate, and the gap when exactly two players are compared."""
+        n_resamples, confidence, seed = bootstrap_settings(self.config)
+        matches = {
+            row.player_name: self._match_rows(row.player_id, scoped_ids) for row in answer.rows
+        }
+        answer.intervals = {
+            name: _per90_interval(
+                frame, metric, n_resamples=n_resamples, confidence=confidence, seed=seed
+            )
+            for name, frame in matches.items()
+            if not frame.empty
+        }
+        if len(answer.rows) == 2:
+            left, right = (row.player_name for row in answer.rows)
+            if not matches[left].empty and not matches[right].empty:
+                answer.difference = difference_interval(
+                    matches[left],
+                    matches[right],
+                    metric,
+                    n_resamples=n_resamples,
+                    confidence=confidence,
+                    seed=seed,
+                )
+
+    def _match_rows(self, player_id: int, scoped_ids: set[int] | None):
+        rows = self.player_matches[self.player_matches["player_id"] == player_id]
+        return rows if scoped_ids is None else rows[rows["match_id"].isin(scoped_ids)]

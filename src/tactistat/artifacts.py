@@ -34,6 +34,21 @@ def manifest_matches(manifest: dict[str, Any] | None, expected: dict[str, Any]) 
     )
 
 
+def project_relative(path: Path | str) -> str:
+    """A path as written in a report: relative to the repo when it lives there.
+
+    An absolute path names a directory on the machine that produced the run,
+    which is exactly the thing a reader cloning the repository does not have.
+    """
+    from tactistat.config import PROJECT_ROOT
+
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
 def write_json_atomic(path: Path, value: Any, *, indent: int = 2) -> None:
     """Write JSON through a temporary file, then replace the target."""
     path.parent.mkdir(parents=True, exist_ok=True)

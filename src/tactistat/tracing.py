@@ -64,6 +64,8 @@ class JsonlTraceHandler(BaseCallbackHandler):
                 "run_id": str(run_id),
                 "parent_run_id": None if parent_run_id is None else str(parent_run_id),
                 "pipeline_run_id": (metadata or {}).get("tactistat_run_id"),
+                "evaluation_item_id": (metadata or {}).get("tactistat_eval_item_id"),
+                "evaluation_call_id": (metadata or {}).get("tactistat_eval_call_id"),
                 "node": (metadata or {}).get("langgraph_node"),
                 "timestamp": time.time(),
                 "model": (serialized or {}).get("name"),

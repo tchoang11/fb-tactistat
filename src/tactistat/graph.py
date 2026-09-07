@@ -19,7 +19,7 @@ class Stages(Protocol):
     """What the graph needs from the pipeline; the contract lives there."""
 
     def translate(self, question: str, history: list[dict]) -> Any: ...
-    def route(self, query: str) -> Any: ...
+    def route(self, query: str, intent_hint: str | None = None) -> Any: ...
     def run_stats(self, route: Any) -> Any: ...
     def run_rag(self, queries: list[str]) -> Any: ...
     def retrieval_queries(self, route: Any, translation: Any) -> list[str]: ...
@@ -71,7 +71,7 @@ def build_graph(
 
     def route_node(state: GraphState) -> dict[str, Any]:
         started = time.perf_counter()
-        route = stages.route(state["translation"].query)
+        route = stages.route(state["translation"].query, intent_hint=state["question"])
         queries = stages.retrieval_queries(route, state["translation"])
         # Never carry tool evidence into the next turn.
         return {
@@ -148,6 +148,7 @@ CHECKPOINT_TYPES = (
     ("tactistat.stats_tool.query", "PlayerRow"),
     ("tactistat.stats_tool.query", "TotalRow"),
     ("tactistat.stats_tool.query", "MatchRef"),
+    ("tactistat.stats_tool.bootstrap", "Interval"),
     ("tactistat.rag_tool.retrieve", "RagAnswer"),
     ("tactistat.rag_tool.retrieve", "Passage"),
     ("tactistat.synthesis.synthesize", "Answer"),

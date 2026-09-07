@@ -1,0 +1,3065 @@
+{
+  "schema_version": 2,
+  "axis": "translation_uncached",
+  "mode": "retrieval",
+  "question": "Do the generative translation arms reproduce against a live provider?",
+  "status": "complete",
+  "started_at": "2026-08-19T10:55:31.643447+00:00",
+  "package_version": "0.1.0",
+  "test_set": {
+    "name": "tactistat-world-cup-2022-v1",
+    "fingerprint": "0dfd388f8ece9c95"
+  },
+  "base_config_fingerprint": "296fd1c1fb3d0077",
+  "base_config": {
+    "dataset": {
+      "competition_id": 43,
+      "season_id": 106,
+      "competition_name": "FIFA World Cup",
+      "season_name": "2022",
+      "min_minutes_for_per90": 270
+    },
+    "models": {
+      "translator": "gemini:3.5-flash-lite",
+      "router": "groq:gpt-oss-20b",
+      "synthesis": "groq:gpt-oss-120b",
+      "judge": "gemini:3.6-flash"
+    },
+    "llm": {
+      "temperature": 0.0,
+      "max_tokens": 1024,
+      "timeout_seconds": 60,
+      "max_retries": 3,
+      "max_tokens_by_role": {
+        "judge": 4096
+      },
+      "cache_enabled": true,
+      "cache_dir": "data/cache/llm"
+    },
+    "tracing": {
+      "enabled": false,
+      "project": "tactistat",
+      "file_dir": "data/traces"
+    },
+    "conversation": {
+      "history_turns": 2
+    },
+    "query_translation": {
+      "enabled": true,
+      "strategy": "rewrite",
+      "n_variants": 3
+    },
+    "router": {
+      "strategy": "few_shot",
+      "labels": [
+        "STAT",
+        "TACTICAL",
+        "HYBRID"
+      ]
+    },
+    "stats_tool": {
+      "processed_dir": "data/processed",
+      "metrics": [
+        "goals",
+        "assists",
+        "xg",
+        "shots",
+        "passes_attempted",
+        "passes_completed",
+        "pass_accuracy",
+        "key_passes",
+        "dribbles_completed",
+        "tackles",
+        "interceptions"
+      ],
+      "per90_metrics": [
+        "goals",
+        "assists",
+        "xg",
+        "shots",
+        "passes_completed",
+        "key_passes"
+      ]
+    },
+    "wikipedia": {
+      "language": "en",
+      "user_agent": "TactiStat/0.1 (https://github.com/tchoang11/fb-tactistat) python-requests",
+      "min_appearances": 4,
+      "include_all_scorers": true,
+      "max_workers": 4,
+      "requests_per_second": 5,
+      "max_retries": 5,
+      "timeout_seconds": 30,
+      "maxlag_seconds": 5,
+      "drop_sections": [
+        "References",
+        "External links",
+        "See also",
+        "Notes",
+        "Bibliography",
+        "Further reading",
+        "Sources",
+        "Citations"
+      ],
+      "min_section_chars": 120
+    },
+    "rag": {
+      "corpus_dir": "data/processed/wikipedia",
+      "index_dir": "data/index",
+      "chunking": {
+        "strategy": "section",
+        "max_tokens": 512,
+        "overlap_tokens": 0
+      },
+      "embedding": {
+        "model": "BAAI/bge-small-en-v1.5",
+        "batch_size": 32,
+        "normalize": true
+      },
+      "retrieval": {
+        "mode": "dense",
+        "top_k": 5,
+        "hybrid_alpha": 0.5
+      },
+      "rerank": {
+        "enabled": false,
+        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "candidate_k": 20
+      }
+    },
+    "synthesis": {
+      "allow_abstain": true,
+      "require_citations": true
+    },
+    "eval": {
+      "test_set": "eval/test_set.json",
+      "results_dir": "eval/results",
+      "recall_at_k": [
+        1,
+        3,
+        5
+      ],
+      "judge": {
+        "enabled": true
+      },
+      "bootstrap": {
+        "n_resamples": 10000,
+        "confidence_level": 0.95,
+        "seed": 42
+      }
+    }
+  },
+  "recall_at_k": [
+    1,
+    3,
+    5
+  ],
+  "arms": [
+    {
+      "name": "multi_query",
+      "overrides": {
+        "query_translation.strategy": "multi_query",
+        "llm.cache_enabled": false
+      },
+      "effective_overrides": {
+        "llm.cache_enabled": false,
+        "query_translation.strategy": "multi_query"
+      },
+      "config_fingerprint": "452730eaac7ff148",
+      "error": null,
+      "items": 30,
+      "metrics": {
+        "retrieval_mrr": {
+          "mean": 0.2994444444444444,
+          "n": 30
+        },
+        "retrieval_recall_at_1": {
+          "mean": 0.23333333333333334,
+          "n": 30
+        },
+        "retrieval_recall_at_3": {
+          "mean": 0.3333333333333333,
+          "n": 30
+        },
+        "retrieval_recall_at_5": {
+          "mean": 0.4,
+          "n": 30
+        }
+      },
+      "retrieval_ms": {
+        "p50": 43.697708009858616,
+        "p95": 61.12800000119023,
+        "n": 30
+      },
+      "translation_status_counts": {
+        "translated": 30
+      },
+      "translation_degradations": 0,
+      "errors": 0,
+      "routed_away_from_rag": 2,
+      "rows": [
+        {
+          "id": "tactical-en-01",
+          "language": "en",
+          "queries": [
+            "Why was the 2022 FIFA World Cup in Qatar scheduled for November and December?",
+            "reasons for holding the 2022 World Cup in winter",
+            "climate considerations for Qatar 2022 tournament dates",
+            "why 2022 FIFA World Cup was moved from summer"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "Why was the 2022 FIFA World Cup in Qatar scheduled for November and December?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 44.088541995733976,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup",
+              "heading": "Move to November and December",
+              "chunk_id": 4926
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup",
+              "heading": "Schedule",
+              "chunk_id": 4877
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Venue",
+              "chunk_id": 5019
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "tactical-vi-02",
+          "language": "vi",
+          "queries": [
+            "How did the high pressing tactical strategy function during the 2022 FIFA World Cup?",
+            "pressing tactics 2022 World Cup",
+            "how teams used high press in Qatar 2022 matches",
+            "tactical analysis of high pressing at the 2022 FIFA World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How did the high pressing tactical strategy function during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 71.85679099347908,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup",
+              "heading": "Match balls",
+              "chunk_id": 4917
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup",
+              "heading": "Schedule",
+              "chunk_id": 4877
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Host selection criticism",
+              "chunk_id": 4923
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-en-03",
+          "language": "en",
+          "queries": [
+            "What is the difference between zonal marking and man-to-man marking in association football?",
+            "How does zonal defending compare to man-to-man defense in soccer tactics?",
+            "Tactical differences between zonal coverage and man-marking strategies at the 2022 FIFA World Cup",
+            "Defensive formations zonal versus man to man marking"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the difference between zonal marking and man-to-man marking in association football?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 61.12800000119023,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Corner kick",
+              "heading": "Man versus zonal marking",
+              "chunk_id": 81
+            },
+            {
+              "rank": 2,
+              "title": "Marking (association football)",
+              "heading": "Zonal marking",
+              "chunk_id": 330
+            },
+            {
+              "rank": 3,
+              "title": "Marking (association football)",
+              "heading": "Marking today",
+              "chunk_id": 331
+            },
+            {
+              "rank": 4,
+              "title": "Marking (association football)",
+              "heading": "Man-to-man marking",
+              "chunk_id": 329
+            },
+            {
+              "rank": 5,
+              "title": "Association football tactics",
+              "heading": "The man-to-man defence",
+              "chunk_id": 37
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.5,
+            "retrieval_mrr": 0.2
+          }
+        },
+        {
+          "id": "tactical-vi-04",
+          "language": "vi",
+          "queries": [
+            "What is the role and tactical definition of a sweeper-keeper in association football?",
+            "sweeper-keeper tactical responsibilities",
+            "goalkeeper acting as a sweeper role",
+            "what does a sweeper-keeper do on the pitch"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the role and tactical definition of a sweeper-keeper in association football?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 51.02604201238137,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Association football positions",
+              "heading": "Sweeper-keeper",
+              "chunk_id": 2
+            },
+            {
+              "rank": 2,
+              "title": "Defender (association football)",
+              "heading": "Sweeper (libero)",
+              "chunk_id": 121
+            },
+            {
+              "rank": 3,
+              "title": "Goalkeeper (association football)",
+              "heading": "Sweeper-keeper",
+              "chunk_id": 315
+            },
+            {
+              "rank": 4,
+              "title": "Association football positions",
+              "heading": "Sweeper",
+              "chunk_id": 5
+            },
+            {
+              "rank": 5,
+              "title": "Goalkeeper (association football)",
+              "heading": "Introduction",
+              "chunk_id": 304
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "tactical-en-05",
+          "language": "en",
+          "queries": [
+            "What is the tactical role and responsibility of a wing-back in football formations used during the 2022 FIFA World Cup?",
+            "wing-back tactical duties 2022 World Cup",
+            "how wing-backs play in modern football tactics",
+            "defensive and offensive responsibilities of wing-backs"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the tactical role and responsibility of a wing-back in football formations used during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 43.2305829890538,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Association football positions",
+              "heading": "Wing-back",
+              "chunk_id": 7
+            },
+            {
+              "rank": 2,
+              "title": "Defender (association football)",
+              "heading": "Wing-back",
+              "chunk_id": 127
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Poland",
+              "chunk_id": 5060
+            },
+            {
+              "rank": 5,
+              "title": "Association football tactics",
+              "heading": "Attacking",
+              "chunk_id": 23
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "tactical-vi-06",
+          "language": "vi",
+          "queries": [
+            "How is the tiki-taka playing style characterized at the 2022 FIFA World Cup?",
+            "tiki-taka tactical approach in the 2022 FIFA World Cup",
+            "Spain national football team tiki-taka strategy Qatar 2022",
+            "possession-based passing style of play 2022 World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How is the tiki-taka playing style characterized at the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 50.48099999839906,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 2,
+              "title": "Tiki-taka",
+              "heading": "Tactical overview",
+              "chunk_id": 571
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup",
+              "heading": "Draw",
+              "chunk_id": 4889
+            },
+            {
+              "rank": 4,
+              "title": "Tiki-taka",
+              "heading": "Introduction",
+              "chunk_id": 565
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Spain",
+              "chunk_id": 5066
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-en-07",
+          "language": "en",
+          "queries": [
+            "How is a 4-3-3 formation generally structured in soccer?",
+            "4-3-3 tactical formation structure in football",
+            "positions in a 4-3-3 lineup",
+            "how teams line up in a 4-3-3 formation at the 2022 World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How is a 4-3-3 formation generally structured in soccer?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 37.12174999236595,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Formation (association football)",
+              "heading": "3–3–3–1",
+              "chunk_id": 194
+            },
+            {
+              "rank": 2,
+              "title": "Formation (association football)",
+              "heading": "4–1–2–3",
+              "chunk_id": 177
+            },
+            {
+              "rank": 3,
+              "title": "Formation (association football)",
+              "heading": "5–2–2–1",
+              "chunk_id": 195
+            },
+            {
+              "rank": 4,
+              "title": "Formation (association football)",
+              "heading": "4–5–1",
+              "chunk_id": 184
+            },
+            {
+              "rank": 5,
+              "title": "Formation (association football)",
+              "heading": "4–2–1–3",
+              "chunk_id": 183
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-vi-08",
+          "language": "vi",
+          "queries": [
+            "Why did a team choose to use a low block defensive strategy during the 2022 FIFA World Cup?",
+            "Tactical reasons for adopting a low block defense in 2022 World Cup matches",
+            "Defensive tactics and low block usage by underdog teams in Qatar 2022",
+            "Why did teams like Morocco or Saudi Arabia rely on a low block defense?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "Why did a team choose to use a low block defensive strategy during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 50.06179100018926,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Association football tactics",
+              "heading": "Other considerations",
+              "chunk_id": 38
+            },
+            {
+              "rank": 2,
+              "title": "Association football tactics",
+              "heading": "Attacking tactics",
+              "chunk_id": 20
+            },
+            {
+              "rank": 3,
+              "title": "Association football tactics",
+              "heading": "Defending with the ball",
+              "chunk_id": 43
+            },
+            {
+              "rank": 4,
+              "title": "Qatar national football team",
+              "heading": "Introduction",
+              "chunk_id": 4621
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-en-09",
+          "language": "en",
+          "queries": [
+            "What are the rules and procedure for a penalty shoot-out during the 2022 FIFA World Cup?",
+            "How does the penalty shoot-out tiebreaker work in FIFA World Cup knockout matches?",
+            "Rules of penalty kicks after extra time in Qatar 2022",
+            "FIFA World Cup penalty shootout format and procedure"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What are the rules and procedure for a penalty shoot-out during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 42.06141699978616,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Penalty shoot-out (association football)",
+              "heading": "Introduction",
+              "chunk_id": 461
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup",
+              "heading": "Knockout stage",
+              "chunk_id": 4902
+            },
+            {
+              "rank": 3,
+              "title": "Penalty shoot-out (association football)",
+              "heading": "Internationals",
+              "chunk_id": 475
+            },
+            {
+              "rank": 4,
+              "title": "Penalty shoot-out (association football)",
+              "heading": "Internationals",
+              "chunk_id": 479
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Discipline",
+              "chunk_id": 4909
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-vi-10",
+          "language": "vi",
+          "queries": [
+            "How did Emiliano Martinez impact the penalty shootout in the 2022 FIFA World Cup final?",
+            "Emiliano Martinez penalty shootout performance Argentina France final",
+            "Martinez penalty saves 2022 World Cup final",
+            "how Emiliano Martinez influenced the final shootout"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How did Emiliano Martinez impact the penalty shootout in the 2022 FIFA World Cup final?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 49.332999988109805,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Penalty kick (association football)",
+              "heading": "Distraction",
+              "chunk_id": 446
+            },
+            {
+              "rank": 2,
+              "title": "Emiliano Martínez",
+              "heading": "Penalty performances",
+              "chunk_id": 1381
+            },
+            {
+              "rank": 3,
+              "title": "Emiliano Martínez",
+              "heading": "International career",
+              "chunk_id": 1379
+            },
+            {
+              "rank": 4,
+              "title": "Emiliano Martínez",
+              "heading": "Notable examples",
+              "chunk_id": 1382
+            },
+            {
+              "rank": 5,
+              "title": "Emiliano Martínez",
+              "heading": "International career",
+              "chunk_id": 1378
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-en-11",
+          "language": "en",
+          "queries": [
+            "How did Argentina dominate the first half of the 2022 World Cup final against France?",
+            "Argentina tactical dominance first half 2022 FIFA World Cup final",
+            "How Argentina secured a lead in the first half of the Argentina vs France final",
+            "Lionel Messi and Argentina performance in the first half of the Qatar 2022 final"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How did Argentina dominate the first half of the 2022 World Cup final against France?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 49.116374997538514,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Introduction",
+              "chunk_id": 5015
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup final",
+              "heading": "First half",
+              "chunk_id": 5025
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Background",
+              "chunk_id": 5017
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup Group C",
+              "heading": "Argentina vs Mexico",
+              "chunk_id": 4965
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup knockout stage",
+              "heading": "Final",
+              "chunk_id": 5051
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-vi-12",
+          "language": "vi",
+          "queries": [
+            "What is the historical significance of Morocco's 2022 FIFA World Cup campaign?",
+            "Morocco historic run 2022 World Cup semifinal",
+            "Moroccan national football team achievements in Qatar 2022",
+            "How did Morocco make history at the 2022 World Cup?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the historical significance of Morocco's 2022 FIFA World Cup campaign?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 53.775874999701045,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Morocco national football team",
+              "heading": "2021–2026: Comeback",
+              "chunk_id": 4539
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup knockout stage",
+              "heading": "Introduction",
+              "chunk_id": 5032
+            },
+            {
+              "rank": 3,
+              "title": "Morocco national football team",
+              "heading": "Introduction",
+              "chunk_id": 4529
+            },
+            {
+              "rank": 4,
+              "title": "Yahya Attiyat Allah",
+              "heading": "2022 FIFA World Cup",
+              "chunk_id": 3947
+            },
+            {
+              "rank": 5,
+              "title": "Morocco national football team",
+              "heading": "FIFA World Cup",
+              "chunk_id": 4545
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "tactical-en-13",
+          "language": "en",
+          "queries": [
+            "How does Lionel Messi's tactical positioning contribute to Argentina's strategy during the 2022 FIFA World Cup?",
+            "Lionel Messi role tactics Argentina 2022 World Cup",
+            "Where did Lionel Messi play on the pitch for Argentina in Qatar 2022",
+            "Lionel Messi tactical analysis Argentina national team FIFA World Cup 2022"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How does Lionel Messi's tactical positioning contribute to Argentina's strategy during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 47.499708001851104,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Lionel Messi",
+              "heading": "International career",
+              "chunk_id": 2318
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup Group C",
+              "heading": "Argentina vs Mexico",
+              "chunk_id": 4965
+            },
+            {
+              "rank": 3,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2301
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Introduction",
+              "chunk_id": 5015
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup knockout stage",
+              "heading": "Argentina vs Croatia",
+              "chunk_id": 5048
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-vi-14",
+          "language": "vi",
+          "queries": [
+            "What are the main strengths in Kylian Mbappe's playing style at the 2022 FIFA World Cup?",
+            "Kylian Mbappe attributes strengths playing style 2022 World Cup",
+            "How did Kylian Mbappe's speed and attacking abilities impact France at Qatar 2022?",
+            "Kylian Mbappe performance analysis 2022 FIFA World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What are the main strengths in Kylian Mbappe's playing style at the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 45.117750007193536,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2230
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2229
+            },
+            {
+              "rank": 3,
+              "title": "Kylian Mbappé",
+              "heading": "Legacy",
+              "chunk_id": 2251
+            },
+            {
+              "rank": 4,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 5,
+              "title": "Kylian Mbappé",
+              "heading": "Style of play",
+              "chunk_id": 2250
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.2
+          }
+        },
+        {
+          "id": "tactical-en-15",
+          "language": "en",
+          "queries": [
+            "What are the tactical disadvantages or defensive risks of deploying attacking full-backs during the 2022 FIFA World Cup?",
+            "defensive vulnerabilities caused by offensive full-backs in Qatar 2022 tactics",
+            "how do teams cover space when full-backs attack in the 2022 World Cup",
+            "tactical analysis of full-back overlapping and defensive transitions in 2022"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What are the tactical disadvantages or defensive risks of deploying attacking full-backs during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 36.36545799963642,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Defender (association football)",
+              "heading": "Full-back",
+              "chunk_id": 124
+            },
+            {
+              "rank": 2,
+              "title": "Defender (association football)",
+              "heading": "Full-back",
+              "chunk_id": 123
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 4,
+              "title": "Association football positions",
+              "heading": "Full-back",
+              "chunk_id": 6
+            },
+            {
+              "rank": 5,
+              "title": "Association football tactics",
+              "heading": "Studies",
+              "chunk_id": 51
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.5,
+            "retrieval_mrr": 0.25
+          }
+        },
+        {
+          "id": "hybrid-en-01",
+          "language": "en",
+          "queries": [
+            "How many goals did Lionel Messi score during the 2022 FIFA World Cup and which individual award did he receive for his performance?",
+            "Lionel Messi 2022 World Cup goal tally and Golden Ball award",
+            "Argentina captain goals scored in Qatar 2022 tournament",
+            "How many goals did Messi score in the 2022 World Cup leading to his tournament MVP award?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Lionel Messi score during the 2022 FIFA World Cup and which individual award did he receive for his performance?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 46.52033300953917,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Lionel Messi",
+              "heading": "International career",
+              "chunk_id": 2318
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Post-match",
+              "chunk_id": 5030
+            },
+            {
+              "rank": 3,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2301
+            },
+            {
+              "rank": 4,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2300
+            },
+            {
+              "rank": 5,
+              "title": "Nahuel Molina",
+              "heading": "International",
+              "chunk_id": 2851
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "hybrid-vi-02",
+          "language": "vi",
+          "queries": [
+            "How many goals did Kylian Mbappe score in the 2022 FIFA World Cup and what playing style makes him dangerous?",
+            "Kylian Mbappe goal tally and playing characteristics 2022 World Cup",
+            "How many goals did Kylian Mbappe score in Qatar 2022?",
+            "Kylian Mbappe goal statistics and key strengths at the 2022 FIFA World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Kylian Mbappe score in the 2022 FIFA World Cup and what playing style makes him dangerous?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 37.24200000579003,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "2026–present: Third World Cup and France all-time top goalscorer",
+              "chunk_id": 2249
+            },
+            {
+              "rank": 3,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2230
+            },
+            {
+              "rank": 4,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2229
+            },
+            {
+              "rank": 5,
+              "title": "Kylian Mbappé",
+              "heading": "2025–2026: La Liga and Champions League top scorer",
+              "chunk_id": 2244
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-03",
+          "language": "en",
+          "queries": [
+            "How many total goals did Argentina score during the 2022 FIFA World Cup and what was the final score of the final match?",
+            "Argentina goal tally 2022 World Cup and final match result",
+            "How many goals did Lionel Messi and Argentina score in Qatar 2022 and how did the Argentina vs France final end",
+            "Argentina tournament statistics 2022 FIFA World Cup goals scored and final match outcome"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many total goals did Argentina score during the 2022 FIFA World Cup and what was the final score of the final match?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 44.469541011494584,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Introduction",
+              "chunk_id": 5015
+            },
+            {
+              "rank": 2,
+              "title": "Leandro Paredes",
+              "heading": "International",
+              "chunk_id": 2285
+            },
+            {
+              "rank": 3,
+              "title": "Argentina national football team",
+              "heading": "Global",
+              "chunk_id": 4124
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Post-match",
+              "chunk_id": 5029
+            },
+            {
+              "rank": 5,
+              "title": "Nahuel Molina",
+              "heading": "International",
+              "chunk_id": 2851
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-04",
+          "language": "vi",
+          "queries": [
+            "How many tackles did Achraf Hakimi make at the 2022 FIFA World Cup and how does his player profile describe his role?",
+            "Achraf Hakimi tackles statistics 2022 World Cup Morocco player profile tactical role",
+            "How many successful tackles did Hakimi complete in Qatar 2022 and what was his position on the pitch?",
+            "Morocco defender Achraf Hakimi defensive contributions and tactical analysis in the 2022 World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many tackles did Achraf Hakimi make at the 2022 FIFA World Cup and how does his player profile describe his role?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 43.162374990060925,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 688
+            },
+            {
+              "rank": 2,
+              "title": "Achraf Hakimi",
+              "heading": "International",
+              "chunk_id": 693
+            },
+            {
+              "rank": 3,
+              "title": "Achraf Hakimi",
+              "heading": "Introduction",
+              "chunk_id": 680
+            },
+            {
+              "rank": 4,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 687
+            },
+            {
+              "rank": 5,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 689
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-05",
+          "language": "en",
+          "queries": [
+            "How many goals did Lionel Messi and Kylian Mbappe score in the 2022 FIFA World Cup, and what was their impact on the final match?",
+            "Lionel Messi vs Kylian Mbappe goal statistics 2022 World Cup final performance",
+            "Messi Mbappe 2022 World Cup goals comparison final match impact",
+            "Argentina vs France 2022 World Cup final Lionel Messi Kylian Mbappe scoring summary"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Lionel Messi and Kylian Mbappe score in the 2022 FIFA World Cup, and what was their impact on the final match?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 45.59062499902211,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "2026–present: Third World Cup and France all-time top goalscorer",
+              "chunk_id": 2249
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Post-match",
+              "chunk_id": 5030
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Introduction",
+              "chunk_id": 5015
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Final",
+              "chunk_id": 4907
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-06",
+          "language": "vi",
+          "queries": [
+            "How many goals did Kylian Mbappé score in the 2022 FIFA World Cup final and how did he achieve his hat-trick?",
+            "Kylian Mbappé final goals 2022 World Cup hat-trick details",
+            "How many goals did Mbappe score against Argentina in the 2022 World Cup final?",
+            "Mbappe World Cup final hat-trick match statistics Qatar 2022"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Kylian Mbappé score in the 2022 FIFA World Cup final and how did he achieve his hat-trick?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 45.92600000614766,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "2026–present: Third World Cup and France all-time top goalscorer",
+              "chunk_id": 2249
+            },
+            {
+              "rank": 3,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2230
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Introduction",
+              "chunk_id": 5015
+            },
+            {
+              "rank": 5,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2229
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-07",
+          "language": "en",
+          "queries": [
+            "How many assists did Lionel Messi record at the 2022 FIFA World Cup, and what playstyle attributes contributed to his chance creation?",
+            "Lionel Messi assist statistics and playmaking analysis 2022 World Cup",
+            "How many goals did Messi assist for Argentina in Qatar 2022",
+            "Lionel Messi vision and passing statistics 2022 FIFA World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many assists did Lionel Messi record at the 2022 FIFA World Cup, and what playstyle attributes contributed to his chance creation?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 37.90750000916887,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Lionel Messi",
+              "heading": "International career",
+              "chunk_id": 2318
+            },
+            {
+              "rank": 2,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2301
+            },
+            {
+              "rank": 3,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2300
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Post-match",
+              "chunk_id": 5030
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup Group C",
+              "heading": "Argentina vs Mexico",
+              "chunk_id": 4965
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-08",
+          "language": "vi",
+          "queries": [
+            "How many goals did Olivier Giroud score and what was his role for France during their run to the 2022 FIFA World Cup final?",
+            "Olivier Giroud goal tally and team contribution for France in Qatar 2022",
+            "France striker Olivier Giroud performance statistics at the 2022 World Cup",
+            "How many goals did Giroud score for the French national team in the 2022 World Cup campaign?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Olivier Giroud score and what was his role for France during their run to the 2022 FIFA World Cup final?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 38.29341700475197,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Olivier Giroud",
+              "heading": "2022–24: All-time France top scorer, second consecutive World Cup final, and international retirement",
+              "chunk_id": 3056
+            },
+            {
+              "rank": 2,
+              "title": "Olivier Giroud",
+              "heading": "Introduction",
+              "chunk_id": 3026
+            },
+            {
+              "rank": 3,
+              "title": "Olivier Giroud",
+              "heading": "2016–18: Euro 2016 runner-up and FIFA World Cup triumph",
+              "chunk_id": 3054
+            },
+            {
+              "rank": 4,
+              "title": "France national football team",
+              "heading": "Renewed success (2016–present)",
+              "chunk_id": 4367
+            },
+            {
+              "rank": 5,
+              "title": "Olivier Giroud",
+              "heading": "2019–21: Post-World Cup victory and Nations League title",
+              "chunk_id": 3055
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "hybrid-en-09",
+          "language": "en",
+          "queries": [
+            "How many key passes did Antoine Griezmann make during the 2022 FIFA World Cup, and how was his tactical role for France described?",
+            "Antoine Griezmann key passes statistics 2022 World Cup France",
+            "How many chances did Antoine Griezmann create for the French national team in Qatar 2022?",
+            "Antoine Griezmann new midfield role Didier Deschamps 2022 World Cup performance"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many key passes did Antoine Griezmann make during the 2022 FIFA World Cup, and how was his tactical role for France described?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 43.697708009858616,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Antoine Griezmann",
+              "heading": "Introduction",
+              "chunk_id": 832
+            },
+            {
+              "rank": 2,
+              "title": "Antoine Griezmann",
+              "heading": "2021–2024: Nations League title and second consecutive World Cup final",
+              "chunk_id": 853
+            },
+            {
+              "rank": 3,
+              "title": "Antoine Griezmann",
+              "heading": "2018–2021: FIFA World Cup triumph",
+              "chunk_id": 852
+            },
+            {
+              "rank": 4,
+              "title": "Antoine Griezmann",
+              "heading": "2021–2023: Initial loan and La Liga's top assist provider",
+              "chunk_id": 845
+            },
+            {
+              "rank": 5,
+              "title": "Antoine Griezmann",
+              "heading": "2017–18: UEFA Europa League win",
+              "chunk_id": 841
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-10",
+          "language": "vi",
+          "queries": [
+            "How many goals did Angel Di Maria score in the 2022 World Cup final and how was the goal scored?",
+            "Angel Di Maria goal in 2022 FIFA World Cup final Argentina vs France",
+            "How many goals did Di Maria score in the 2022 World Cup final match",
+            "Angel Di Maria scoring action in the 2022 World Cup final"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Angel Di Maria score in the 2022 World Cup final and how was the goal scored?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 41.22787500091363,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Ángel Di María",
+              "heading": "2021–2024: Copa América, Finalissima, World Cup triumphs and retirement",
+              "chunk_id": 4067
+            },
+            {
+              "rank": 2,
+              "title": "Ángel Di María",
+              "heading": "2021–2024: Copa América, Finalissima, World Cup triumphs and retirement",
+              "chunk_id": 4066
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup final",
+              "heading": "First half",
+              "chunk_id": 5025
+            },
+            {
+              "rank": 4,
+              "title": "Ángel Di María",
+              "heading": "Introduction",
+              "chunk_id": 4047
+            },
+            {
+              "rank": 5,
+              "title": "Thiago Silva",
+              "heading": "International",
+              "chunk_id": 3698
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.3333333333333333
+          }
+        },
+        {
+          "id": "hybrid-en-11",
+          "language": "en",
+          "queries": [
+            "How many total goals did the Spain national football team score during the 2022 FIFA World Cup and what playing style are they known for?",
+            "Spain national team goal statistics 2022 World Cup tiki-taka",
+            "how many goals did Spain score in Qatar 2022",
+            "Spain possession style of play at the 2022 FIFA World Cup"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many total goals did the Spain national football team score during the 2022 FIFA World Cup and what playing style are they known for?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 37.59870798967313,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Carlos Soler",
+              "heading": "International",
+              "chunk_id": 1060
+            },
+            {
+              "rank": 2,
+              "title": "Gavi (footballer)",
+              "heading": "International",
+              "chunk_id": 1530
+            },
+            {
+              "rank": 3,
+              "title": "Spain national football team",
+              "heading": "History",
+              "chunk_id": 4733
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Spain",
+              "chunk_id": 5066
+            },
+            {
+              "rank": 5,
+              "title": "Spain national football team",
+              "heading": "Introduction",
+              "chunk_id": 4729
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-12",
+          "language": "vi",
+          "queries": [
+            "How many passes did Luka Modric complete and how did his playing style help Croatia during the 2022 FIFA World Cup?",
+            "Luka Modrić passing statistics and tactical role in Croatia's midfield at Qatar 2022",
+            "total completed passes by Luka Modrić 2022 World Cup",
+            "how Luka Modrić captained and influenced Croatia's performance in 2022"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many passes did Luka Modric complete and how did his playing style help Croatia during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 37.92437500669621,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Luka Modrić",
+              "heading": "International",
+              "chunk_id": 2426
+            },
+            {
+              "rank": 2,
+              "title": "Luka Modrić",
+              "heading": "International",
+              "chunk_id": 2424
+            },
+            {
+              "rank": 3,
+              "title": "Luka Modrić",
+              "heading": "2019–2022: Bronze Ball of the 2022 World Cup",
+              "chunk_id": 2411
+            },
+            {
+              "rank": 4,
+              "title": "Luka Modrić",
+              "heading": "Introduction",
+              "chunk_id": 2380
+            },
+            {
+              "rank": 5,
+              "title": "Luka Modrić",
+              "heading": "2026: Fifth World Cup",
+              "chunk_id": 2413
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-13",
+          "language": "en",
+          "queries": [],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Julian Alvarez score during the 2022 FIFA World Cup and what were the key highlights of his performance?",
+          "route_label": "STAT",
+          "error": null,
+          "retrieval_ms": 0.0002500019036233425,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-14",
+          "language": "vi",
+          "queries": [
+            "How many total goals did Morocco score and why was their campaign historic at the 2022 FIFA World Cup?",
+            "Morocco 2022 World Cup goal tally and historic semi-final run",
+            "Atlas Lions total goals scored in Qatar 2022",
+            "Why was Morocco's performance in the 2022 FIFA World Cup considered historic?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many total goals did Morocco score and why was their campaign historic at the 2022 FIFA World Cup?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 42.56699999677949,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Morocco national football team",
+              "heading": "2021–2026: Comeback",
+              "chunk_id": 4539
+            },
+            {
+              "rank": 2,
+              "title": "Morocco national football team",
+              "heading": "Introduction",
+              "chunk_id": 4529
+            },
+            {
+              "rank": 3,
+              "title": "Morocco national football team",
+              "heading": "FIFA World Cup",
+              "chunk_id": 4545
+            },
+            {
+              "rank": 4,
+              "title": "Qatar national football team",
+              "heading": "Introduction",
+              "chunk_id": 4621
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Semi-finals",
+              "chunk_id": 4905
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "hybrid-en-15",
+          "language": "en",
+          "queries": [],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many total goals did the France national football team score during the 2022 FIFA World Cup, and how close were they to winning the tournament consecutively?",
+          "route_label": "STAT",
+          "error": null,
+          "retrieval_ms": 0.0002500019036233425,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "hyde",
+      "overrides": {
+        "query_translation.strategy": "hyde",
+        "llm.cache_enabled": false
+      },
+      "effective_overrides": {
+        "llm.cache_enabled": false,
+        "query_translation.strategy": "hyde"
+      },
+      "config_fingerprint": "9e5cd8c65946d278",
+      "error": null,
+      "items": 30,
+      "metrics": {
+        "retrieval_mrr": {
+          "mean": 0.21805555555555556,
+          "n": 24
+        },
+        "retrieval_recall_at_1": {
+          "mean": 0.041666666666666664,
+          "n": 24
+        },
+        "retrieval_recall_at_3": {
+          "mean": 0.34722222222222227,
+          "n": 24
+        },
+        "retrieval_recall_at_5": {
+          "mean": 0.4930555555555556,
+          "n": 24
+        }
+      },
+      "retrieval_ms": {
+        "p50": 13.67204199777916,
+        "p95": 24.738790991250426,
+        "n": 24
+      },
+      "translation_status_counts": {
+        "translated": 24,
+        "failed": 6
+      },
+      "translation_degradations": 6,
+      "errors": 6,
+      "routed_away_from_rag": 3,
+      "rows": [
+        {
+          "id": "tactical-en-01",
+          "language": "en",
+          "queries": [
+            "The 2022 FIFA World Cup in Qatar was scheduled for November and December instead of the traditional summer months due to the intense summer heat in the host country. Temperatures in Qatar during June and July frequently exceed 40 degrees Celsius, making it unsafe for players and spectators. Moving the tournament to the cooler late-fall months ensured optimal playing conditions."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "Why was the 2022 FIFA World Cup played in November and December?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 16.122667002491653,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup",
+              "heading": "Schedule",
+              "chunk_id": 4877
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup",
+              "heading": "Move to November and December",
+              "chunk_id": 4926
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Venue",
+              "chunk_id": 5019
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-vi-02",
+          "language": "vi",
+          "queries": [
+            "High pressing was a prominent tactical feature employed by several teams during the 2022 FIFA World Cup in Qatar. Coaches designed aggressive defensive strategies to disrupt opponent build-up play high up the pitch, forcing turnovers and creating immediate goalscoring opportunities in matches."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How did teams utilize high pressing tactics during the 2022 FIFA World Cup in Qatar?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 26.274249990819953,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup",
+              "heading": "Schedule",
+              "chunk_id": 4877
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup",
+              "heading": "Match balls",
+              "chunk_id": 4917
+            },
+            {
+              "rank": 5,
+              "title": "Glossary of association football terms",
+              "heading": "P",
+              "chunk_id": 288
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-en-03",
+          "language": "en",
+          "queries": [
+            "During the 2022 FIFA World Cup, tactical analyses frequently highlighted the differences between zonal marking and man-to-man defending. In zonal defense, each player is responsible for defending a specific area of the pitch, whereas in man-to-man marking, defenders track specific opponents wherever they move across the field."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the difference between zonal and man-to-man defending?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 24.738790991250426,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Marking (association football)",
+              "heading": "Zonal marking",
+              "chunk_id": 330
+            },
+            {
+              "rank": 2,
+              "title": "Corner kick",
+              "heading": "Man versus zonal marking",
+              "chunk_id": 81
+            },
+            {
+              "rank": 3,
+              "title": "Marking (association football)",
+              "heading": "Marking today",
+              "chunk_id": 331
+            },
+            {
+              "rank": 4,
+              "title": "Glossary of association football terms",
+              "heading": "Z",
+              "chunk_id": 303
+            },
+            {
+              "rank": 5,
+              "title": "Association football tactics",
+              "heading": "The man-to-man defence",
+              "chunk_id": 37
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.5,
+            "retrieval_mrr": 0.2
+          }
+        },
+        {
+          "id": "tactical-vi-04",
+          "language": "vi",
+          "queries": [
+            "During the 2022 FIFA World Cup, the role of a sweeper-keeper became increasingly prominent as goalkeepers were required to act as an extra defender by sweeping up through balls behind the defensive line and initiating attacks with their distribution from the back."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What is the role of a sweeper-keeper in the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 20.597542010364123,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Defender (association football)",
+              "heading": "Sweeper (libero)",
+              "chunk_id": 121
+            },
+            {
+              "rank": 2,
+              "title": "Goalkeeper (association football)",
+              "heading": "Sweeper-keeper",
+              "chunk_id": 315
+            },
+            {
+              "rank": 3,
+              "title": "Association football positions",
+              "heading": "Sweeper-keeper",
+              "chunk_id": 2
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.3333333333333333
+          }
+        },
+        {
+          "id": "tactical-en-05",
+          "language": "en",
+          "queries": [
+            "During the 2022 FIFA World Cup, wing-backs played a crucial tactical role combining both defensive solidity and attacking width. Operating in a system with three central defenders, they were responsible for covering the entire flank, tracking opposing wingers on defense, and providing overlapping runs and crosses in the attacking third."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "What tactical job does a wing-back perform during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 22.53970799210947,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Defender (association football)",
+              "heading": "Wing-back",
+              "chunk_id": 127
+            },
+            {
+              "rank": 2,
+              "title": "Association football positions",
+              "heading": "Wing-back",
+              "chunk_id": 7
+            },
+            {
+              "rank": 3,
+              "title": "Midfielder",
+              "heading": "Winger",
+              "chunk_id": 344
+            },
+            {
+              "rank": 4,
+              "title": "Defender (association football)",
+              "heading": "Full-back",
+              "chunk_id": 122
+            },
+            {
+              "rank": 5,
+              "title": "Formation (association football)",
+              "heading": "4–1–2–3",
+              "chunk_id": 177
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-vi-06",
+          "language": "vi",
+          "queries": [
+            "Tiki-taka is a tactical style in football characterized by short passing, continuous movement, and maintaining possession of the ball. During the 2022 FIFA World Cup in Qatar, teams such as Spain utilized this methodology to dominate possession and control the tempo of matches through intricate passing networks."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How is the tiki-taka playing style explained in the context of the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 23.72220800316427,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Tiki-taka",
+              "heading": "Introduction",
+              "chunk_id": 565
+            },
+            {
+              "rank": 2,
+              "title": "Tiki-taka",
+              "heading": "Tactical overview",
+              "chunk_id": 571
+            },
+            {
+              "rank": 3,
+              "title": "Spain national football team",
+              "heading": "Style of play",
+              "chunk_id": 4735
+            },
+            {
+              "rank": 4,
+              "title": "Total Football",
+              "heading": "Modern era",
+              "chunk_id": 594
+            },
+            {
+              "rank": 5,
+              "title": "Tiki-taka",
+              "heading": "History of countering tiki-taka",
+              "chunk_id": 579
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-en-07",
+          "language": "en",
+          "queries": [
+            "The 4-3-3 formation is a tactical setup in association football comprising four defenders, three midfielders, and three forwards. This formation is widely praised for its balance between attacking width and defensive stability, allowing teams to dominate possession and press effectively across the pitch during matches like the 2022 FIFA World Cup."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How is a 4-3-3 formation structured in football tactics?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 22.54908399481792,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Formation (association football)",
+              "heading": "4–1–2–3",
+              "chunk_id": 177
+            },
+            {
+              "rank": 2,
+              "title": "Formation (association football)",
+              "heading": "3–3–3–1",
+              "chunk_id": 194
+            },
+            {
+              "rank": 3,
+              "title": "Formation (association football)",
+              "heading": "5–2–2–1",
+              "chunk_id": 195
+            },
+            {
+              "rank": 4,
+              "title": "Formation (association football)",
+              "heading": "4–3–3",
+              "chunk_id": 174
+            },
+            {
+              "rank": 5,
+              "title": "Formation (association football)",
+              "heading": "Introduction",
+              "chunk_id": 158
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.25
+          }
+        },
+        {
+          "id": "tactical-vi-08",
+          "language": "vi",
+          "queries": [
+            "During the 2022 FIFA World Cup in Qatar, several underdog teams chose to defend in a low block to neutralize the attacking threats of more dominant opponents. By keeping their defensive and midfield lines very compact close to their own penalty area, these teams aimed to minimize space in behind, block shooting lanes, and frustrate possession-heavy sides."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "Why did a team choose to use a low block defensive strategy during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 23.529457990662195,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup",
+              "heading": "Introduction",
+              "chunk_id": 4875
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup squads",
+              "heading": "Introduction",
+              "chunk_id": 5053
+            },
+            {
+              "rank": 3,
+              "title": "Qatar national football team",
+              "heading": "Introduction",
+              "chunk_id": 4621
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup",
+              "heading": "Team base camps",
+              "chunk_id": 4884
+            },
+            {
+              "rank": 5,
+              "title": "2022 FIFA World Cup",
+              "heading": "Schedule",
+              "chunk_id": 4877
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "tactical-en-09",
+          "language": "en",
+          "queries": [
+            "During the knockout stages of the 2022 FIFA World Cup, if a match was tied after extra time, a penalty shoot-out determined the winner. Each team alternated taking kicks from the penalty spot, with an initial five rounds per team. If the score remained tied after five rounds, sudden-death rounds continued until one team scored and the other missed."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How does a football penalty shoot-out proceed during the 2022 FIFA World Cup?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 21.17595799791161,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "2022 FIFA World Cup",
+              "heading": "Knockout stage",
+              "chunk_id": 4902
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup knockout stage",
+              "heading": "Format",
+              "chunk_id": 5033
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup",
+              "heading": "Tournament ranking",
+              "chunk_id": 4910
+            },
+            {
+              "rank": 4,
+              "title": "Penalty shoot-out (association football)",
+              "heading": "Procedure",
+              "chunk_id": 467
+            },
+            {
+              "rank": 5,
+              "title": "Penalty shoot-out (association football)",
+              "heading": "Introduction",
+              "chunk_id": 461
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.25
+          }
+        },
+        {
+          "id": "tactical-vi-10",
+          "language": "vi",
+          "queries": [
+            "During the penalty shoot-out in the 2022 FIFA World Cup final between Argentina and France, goalkeeper Emiliano Martinez played a crucial role. He made a vital save against Kingsley Coman and used psychological tactics to disrupt French penalty takers, ultimately helping Argentina secure the World Cup title."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How did Emiliano Martinez impact the penalty shoot-out in the 2022 FIFA World Cup final?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 13.67204199777916,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Emiliano Martínez",
+              "heading": "International career",
+              "chunk_id": 1378
+            },
+            {
+              "rank": 2,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Penalty shoot-out",
+              "chunk_id": 5028
+            },
+            {
+              "rank": 3,
+              "title": "Emiliano Martínez",
+              "heading": "Notable examples",
+              "chunk_id": 1382
+            },
+            {
+              "rank": 4,
+              "title": "Emiliano Martínez",
+              "heading": "International career",
+              "chunk_id": 1379
+            },
+            {
+              "rank": 5,
+              "title": "Penalty kick (association football)",
+              "heading": "Distraction",
+              "chunk_id": 446
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.5
+          }
+        },
+        {
+          "id": "tactical-en-11",
+          "language": "en",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 50.502198871s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '50s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 50.502198871s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '50s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "tactical-vi-12",
+          "language": "vi",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 45.687038114s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '45s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 45.687038114s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '45s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "tactical-en-13",
+          "language": "en",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 40.632636936s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '40s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 40.632636936s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '40s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "tactical-vi-14",
+          "language": "vi",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 36.453733953s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '36s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 36.453733953s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '36s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "tactical-en-15",
+          "language": "en",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 32.222844345s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '32s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 32.222844345s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '32s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "hybrid-en-01",
+          "language": "en",
+          "queries": [],
+          "translation_status": "failed",
+          "translation_note": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 28.067259737s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash-lite', 'location': 'global'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '28s'}]}}",
+          "translated_query": null,
+          "route_label": null,
+          "error": "translation failed: ChatGoogleGenerativeAIError: Error calling model 'gemini-3.5-flash-lite' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 28.067259737s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash-lite', 'location': 'global'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '28s'}]}}",
+          "retrieval_ms": null,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {}
+        },
+        {
+          "id": "hybrid-vi-02",
+          "language": "vi",
+          "queries": [
+            "Kylian Mbappe scored eight goals during the 2022 FIFA World Cup in Qatar, winning the Golden Boot award for his exceptional scoring record. His extraordinary pace, explosive acceleration, and exceptional dribbling ability in one-on-one situations made him one of the most dangerous and prolific forwards in the tournament."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Kylian Mbappe score in the 2022 FIFA World Cup, and what is his playing style that makes him dangerous?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 13.841333988239057,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2230
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "2026–present: Third World Cup and France all-time top goalscorer",
+              "chunk_id": 2249
+            },
+            {
+              "rank": 3,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 4,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2229
+            },
+            {
+              "rank": 5,
+              "title": "Kylian Mbappé",
+              "heading": "2018–2021: FIFA World Cup triumph",
+              "chunk_id": 2246
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-03",
+          "language": "en",
+          "queries": [
+            "How many goals did Argentina score in the tournament, and how did the final end?"
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Argentina score in the 2022 FIFA World Cup, and what was the outcome of the final match?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 11.102584001491778,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Nahuel Molina",
+              "heading": "International",
+              "chunk_id": 2851
+            },
+            {
+              "rank": 2,
+              "title": "Argentina national football team",
+              "heading": "History",
+              "chunk_id": 4112
+            },
+            {
+              "rank": 3,
+              "title": "Argentina national football team",
+              "heading": "Introduction",
+              "chunk_id": 4111
+            },
+            {
+              "rank": 4,
+              "title": "Gonzalo Montiel",
+              "heading": "International",
+              "chunk_id": 1549
+            },
+            {
+              "rank": 5,
+              "title": "Julián Alvarez",
+              "heading": "International",
+              "chunk_id": 2072
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-04",
+          "language": "vi",
+          "queries": [
+            "Achraf Hakimi was a key defensive player for Morocco during the 2022 FIFA World Cup in Qatar. His player profile highlights his energetic right-back role, combining defensive resilience with overlapping attacking runs. Throughout the tournament, Hakimi recorded numerous successful tackles and interceptions, contributing significantly to Morocco's historic run to the semi-finals."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many tackles did Achraf Hakimi make at the 2022 FIFA World Cup and how does his player profile describe his role?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 12.245915990206413,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 688
+            },
+            {
+              "rank": 2,
+              "title": "Achraf Hakimi",
+              "heading": "Introduction",
+              "chunk_id": 680
+            },
+            {
+              "rank": 3,
+              "title": "Achraf Hakimi",
+              "heading": "International",
+              "chunk_id": 693
+            },
+            {
+              "rank": 4,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 687
+            },
+            {
+              "rank": 5,
+              "title": "Achraf Hakimi",
+              "heading": "International career",
+              "chunk_id": 689
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-05",
+          "language": "en",
+          "queries": [
+            "Compare Messi and Mbappe's tournament goal totals and explain how both shaped the final."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Lionel Messi and Kylian Mbappe score in the 2022 FIFA World Cup, and what was their impact on the final match?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 9.983707990613766,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2300
+            },
+            {
+              "rank": 2,
+              "title": "Lionel Messi",
+              "heading": "Rivalry with Cristiano Ronaldo",
+              "chunk_id": 2323
+            },
+            {
+              "rank": 3,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Extra time",
+              "chunk_id": 5027
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup final",
+              "heading": "Post-match",
+              "chunk_id": 5030
+            },
+            {
+              "rank": 5,
+              "title": "Lionel Messi",
+              "heading": "Style of play",
+              "chunk_id": 2319
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.3333333333333333,
+            "retrieval_recall_at_5": 0.3333333333333333,
+            "retrieval_mrr": 0.3333333333333333
+          }
+        },
+        {
+          "id": "hybrid-vi-06",
+          "language": "vi",
+          "queries": [
+            "During the 2022 FIFA World Cup final against Argentina, Kylian Mbappé scored a hat-trick, bringing his total goals in the match to three. He scored two goals in quick succession in the second half, including a penalty, and added another in extra time to complete his historic hat-trick."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Kylian Mbappé score in the 2022 FIFA World Cup final and how did he achieve his hat-trick?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 11.48345900583081,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Kylian Mbappé",
+              "heading": "2021–2023: Nations League title and second consecutive World Cup final",
+              "chunk_id": 2247
+            },
+            {
+              "rank": 2,
+              "title": "Kylian Mbappé",
+              "heading": "2026–present: Third World Cup and France all-time top goalscorer",
+              "chunk_id": 2249
+            },
+            {
+              "rank": 3,
+              "title": "Kylian Mbappé",
+              "heading": "Introduction",
+              "chunk_id": 2230
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup",
+              "heading": "Final",
+              "chunk_id": 4907
+            },
+            {
+              "rank": 5,
+              "title": "Kylian Mbappé",
+              "heading": "2025–2026: La Liga and Champions League top scorer",
+              "chunk_id": 2244
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-07",
+          "language": "en",
+          "queries": [
+            "Lionel Messi provided three assists during the 2022 FIFA World Cup in Qatar, cementing his role as a primary playmaker for Argentina. His exceptional vision, precise passing, and ability to read defensive positioning allowed him to unlock opposing defenses and create numerous scoring opportunities for his teammates throughout the tournament."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many assists did Lionel Messi record during the 2022 FIFA World Cup and what aspects of his playing style enabled him to create goalscoring chances?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 15.75158401101362,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Lionel Messi",
+              "heading": "International career",
+              "chunk_id": 2318
+            },
+            {
+              "rank": 2,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2301
+            },
+            {
+              "rank": 3,
+              "title": "Lionel Messi",
+              "heading": "Introduction",
+              "chunk_id": 2300
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup Group C",
+              "heading": "Argentina vs Mexico",
+              "chunk_id": 4965
+            },
+            {
+              "rank": 5,
+              "title": "Lionel Messi",
+              "heading": "International career",
+              "chunk_id": 2317
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-08",
+          "language": "vi",
+          "queries": [
+            "Olivier Giroud played a crucial role as France's primary target man and starting striker during the 2022 FIFA World Cup. He scored four goals throughout the tournament, surpassing Thierry Henry to become the all-time leading goalscorer for the French national team while helping Les Bleus reach the final."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Olivier Giroud score and what was his role for France during their run to the 2022 FIFA World Cup final?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 10.199082986218855,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Olivier Giroud",
+              "heading": "2022–24: All-time France top scorer, second consecutive World Cup final, and international retirement",
+              "chunk_id": 3056
+            },
+            {
+              "rank": 2,
+              "title": "Olivier Giroud",
+              "heading": "2016–18: Euro 2016 runner-up and FIFA World Cup triumph",
+              "chunk_id": 3054
+            },
+            {
+              "rank": 3,
+              "title": "Olivier Giroud",
+              "heading": "2019–21: Post-World Cup victory and Nations League title",
+              "chunk_id": 3055
+            },
+            {
+              "rank": 4,
+              "title": "Olivier Giroud",
+              "heading": "Introduction",
+              "chunk_id": 3026
+            },
+            {
+              "rank": 5,
+              "title": "France national football team",
+              "heading": "Renewed success (2016–present)",
+              "chunk_id": 4367
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 1.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 1.0
+          }
+        },
+        {
+          "id": "hybrid-en-09",
+          "language": "en",
+          "queries": [
+            "During the 2022 FIFA World Cup, Antoine Griezmann played a deeper, unconventional midfield role for France under manager Didier Deschamps. He was instrumental in chance creation, recording numerous key passes and leading his team in overall creative metrics throughout their run to the final."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many key passes did Antoine Griezmann make, and how was his role described for France during the 2022 FIFA World Cup?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 10.328290998586453,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Antoine Griezmann",
+              "heading": "Introduction",
+              "chunk_id": 832
+            },
+            {
+              "rank": 2,
+              "title": "Antoine Griezmann",
+              "heading": "2021–2024: Nations League title and second consecutive World Cup final",
+              "chunk_id": 853
+            },
+            {
+              "rank": 3,
+              "title": "Antoine Griezmann",
+              "heading": "Style of play",
+              "chunk_id": 854
+            },
+            {
+              "rank": 4,
+              "title": "Antoine Griezmann",
+              "heading": "2018–2021: FIFA World Cup triumph",
+              "chunk_id": 852
+            },
+            {
+              "rank": 5,
+              "title": "Antoine Griezmann",
+              "heading": "2014–2016: Senior debut and Euro 2016 runner-up",
+              "chunk_id": 850
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.3333333333333333
+          }
+        },
+        {
+          "id": "hybrid-vi-10",
+          "language": "vi",
+          "queries": [],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Angel Di Maria score in the 2022 FIFA World Cup final and from what situation did it come?",
+          "route_label": "STAT",
+          "error": null,
+          "retrieval_ms": 0.0002500019036233425,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-11",
+          "language": "en",
+          "queries": [
+            "During the 2022 FIFA World Cup in Qatar, the Spain national football team scored a total of nine goals across their four matches. The team is globally renowned for its possession-based style of play known as tiki-taka, which emphasizes short passing, movement, and maintaining control of the ball."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Spain score during the 2022 FIFA World Cup, and what style of play is the national team associated with?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 10.3335000021616,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Spain national football team",
+              "heading": "Style of play",
+              "chunk_id": 4736
+            },
+            {
+              "rank": 2,
+              "title": "Tiki-taka",
+              "heading": "Spain national team",
+              "chunk_id": 570
+            },
+            {
+              "rank": 3,
+              "title": "Tiki-taka",
+              "heading": "Notable success",
+              "chunk_id": 572
+            },
+            {
+              "rank": 4,
+              "title": "Spain national football team",
+              "heading": "Introduction",
+              "chunk_id": 4729
+            },
+            {
+              "rank": 5,
+              "title": "Spain national football team",
+              "heading": "Style of play",
+              "chunk_id": 4735
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.2
+          }
+        },
+        {
+          "id": "hybrid-vi-12",
+          "language": "vi",
+          "queries": [
+            "During the 2022 FIFA World Cup in Qatar, Luka Modric played a crucial role in Croatia's midfield, completing a high number of accurate passes throughout the tournament. His exceptional vision, ball control, and tactical intelligence allowed Croatia to dictate the tempo of matches, maintain possession under pressure, and transition smoothly from defense to attack."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many passes did Luka Modric complete during the 2022 FIFA World Cup and how did his playing style benefit Croatia?",
+          "route_label": "TACTICAL",
+          "error": null,
+          "retrieval_ms": 10.423208004795015,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Luka Modrić",
+              "heading": "Introduction",
+              "chunk_id": 2380
+            },
+            {
+              "rank": 2,
+              "title": "Luka Modrić",
+              "heading": "International",
+              "chunk_id": 2426
+            },
+            {
+              "rank": 3,
+              "title": "Luka Modrić",
+              "heading": "International",
+              "chunk_id": 2424
+            },
+            {
+              "rank": 4,
+              "title": "Luka Modrić",
+              "heading": "2019–2022: Bronze Ball of the 2022 World Cup",
+              "chunk_id": 2411
+            },
+            {
+              "rank": 5,
+              "title": "Luka Modrić",
+              "heading": "2016–2018: Golden Ball of the 2018 World Cup",
+              "chunk_id": 2409
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-en-13",
+          "language": "en",
+          "queries": [],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did Julian Alvarez score during the 2022 FIFA World Cup, and what was notable about his performance?",
+          "route_label": "STAT",
+          "error": null,
+          "retrieval_ms": 0.0002500019036233425,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        },
+        {
+          "id": "hybrid-vi-14",
+          "language": "vi",
+          "queries": [
+            "Morocco scored a total of six goals during their historic 2022 FIFA World Cup campaign in Qatar. Their journey was considered historic because they became the first African and Arab nation to ever reach the semi-finals of the tournament, defeating prominent teams like Spain and Portugal along the way."
+          ],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many total goals did Morocco score at the 2022 FIFA World Cup and why was their journey historic?",
+          "route_label": "HYBRID",
+          "error": null,
+          "retrieval_ms": 16.091083001811057,
+          "retrieved": 5,
+          "passages": [
+            {
+              "rank": 1,
+              "title": "Morocco national football team",
+              "heading": "FIFA World Cup",
+              "chunk_id": 4545
+            },
+            {
+              "rank": 2,
+              "title": "Morocco national football team",
+              "heading": "Introduction",
+              "chunk_id": 4529
+            },
+            {
+              "rank": 3,
+              "title": "Morocco national football team",
+              "heading": "2021–2026: Comeback",
+              "chunk_id": 4539
+            },
+            {
+              "rank": 4,
+              "title": "2022 FIFA World Cup knockout stage",
+              "heading": "Introduction",
+              "chunk_id": 5032
+            },
+            {
+              "rank": 5,
+              "title": "Morocco national football team",
+              "heading": "2021–2026: Comeback",
+              "chunk_id": 4540
+            }
+          ],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 1.0,
+            "retrieval_recall_at_5": 1.0,
+            "retrieval_mrr": 0.3333333333333333
+          }
+        },
+        {
+          "id": "hybrid-en-15",
+          "language": "en",
+          "queries": [],
+          "translation_status": "translated",
+          "translation_note": null,
+          "translated_query": "How many goals did France score in the 2022 FIFA World Cup, and how close did they come to retaining the title?",
+          "route_label": "STAT",
+          "error": null,
+          "retrieval_ms": 0.00029199873097240925,
+          "retrieved": 0,
+          "passages": [],
+          "scores": {
+            "retrieval_recall_at_1": 0.0,
+            "retrieval_recall_at_3": 0.0,
+            "retrieval_recall_at_5": 0.0,
+            "retrieval_mrr": 0.0
+          }
+        }
+      ]
+    }
+  ],
+  "completed_at": "2026-08-19T11:01:08.033268+00:00",
+  "duration_ms": 336389,
+  "arm_errors": 0,
+  "output_path": "eval/results/ablations/translation_uncached.json"
+}

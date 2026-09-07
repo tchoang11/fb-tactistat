@@ -54,7 +54,8 @@ RATE_KEYWORDS = ("per 90", "per-90", "per game", "per match", "rate", "efficienc
 TACTICAL_KEYWORDS = tuple(
     "why, how did, how does, tactic, formation, style, press, pressing, defen, attack, "
     "strategy, approach, explain, describe, what happened, role, shape, build-up, "
-    "counter, set piece, manager, coach".split(", ")
+    "counter, set piece, manager, coach, vì sao, phong cách, chiến thuật, vai trò, "
+    "giải thích".split(", ")
 )
 
 SYSTEM_PROMPT = """You route questions about the 2022 FIFA World Cup to one of two tools.
@@ -172,15 +173,19 @@ def router_settings(config: Config) -> tuple[str, tuple[str, ...]]:
 
 
 def _keyword_metric(text: str) -> str | None:
-    """First configured metric whose surface forms appear in the question.
+    """Most specific metric surface that appears in the question.
 
     Whole words only, allowing a plural: "goalkeeper" contains "goal" but asks
     about no configured metric, while "goals" and "key passes" must still match.
+    Specificity matters too: "expected goals" is xG, not the shorter "goals".
     """
-    for metric, keywords in METRIC_KEYWORDS.items():
-        if any(re.search(rf"\b{re.escape(k)}(?:e?s)?\b", text) for k in keywords):
-            return metric
-    return None
+    matches = [
+        (len(keyword), metric)
+        for metric, keywords in METRIC_KEYWORDS.items()
+        for keyword in keywords
+        if re.search(rf"\b{re.escape(keyword)}(?:e?s)?\b", text)
+    ]
+    return max(matches, default=(0, None))[1]
 
 
 def _capitalised_runs(question: str) -> list[str]:
@@ -193,6 +198,8 @@ def _capitalised_runs(question: str) -> list[str]:
     runs = re.findall(r"\b[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)*", question)
     keep = []
     for run in runs:
+        # English possessives are grammar, not part of a StatsBomb alias.
+        run = re.sub(r"['’]s$", "", run, flags=re.IGNORECASE)
         words = run.split()
         if {word.lower() for word in words} & NON_NAME_WORDS:
             continue
@@ -306,12 +313,25 @@ class Router:
                 return candidate
         return self.labels[0]
 
-    def _validate(self, decision: RouteDecision, question: str) -> Route:
+    def _validate(
+        self, decision: RouteDecision, question: str, intent_hint: str | None = None
+    ) -> Route:
         """Repair rather than trust: a wrong slot must not reach a tool."""
         repairs: list[str] = []
         label = decision.label
         if label not in self.labels:
             label = self._fallback_label(repairs, f"label {label!r} not enabled by router.labels")
+
+        # A model can answer only the numeric half of an explicit
+        # number-plus-explanation question. This signal is conservative: it
+        # requires both a configured metric and a tactical surface.
+        intent = " ".join(part for part in (question, intent_hint) if part)
+        keyword_label = self._keyword_decision(intent).label
+        promoted = False
+        if label == "STAT" and keyword_label == "HYBRID" and "HYBRID" in self.labels:
+            label = "HYBRID"
+            promoted = True
+            repairs.append("question also asks for prose; promoted STAT to HYBRID")
 
         metric = decision.metric
         if label in ("STAT", "HYBRID") and metric not in self.allowed_metrics:
@@ -368,19 +388,26 @@ class Router:
 
         rag_query = None
         if label in ("TACTICAL", "HYBRID"):
-            rag_query = (decision.rag_query or "").strip() or question
+            rag_query = (decision.rag_query or "").strip()
+            if not rag_query:
+                rag_query = (intent_hint or "").strip() if promoted else question
+            rag_query = rag_query or question
         return Route(label, question, self.strategy, stats_args, rag_query, repairs)
 
-    def route(self, question: str) -> Route:
+    def route(self, question: str, intent_hint: str | None = None) -> Route:
         """Classify a question that has already been translated to English."""
         question = (question or "").strip()
         if not question:
             # Keep even the empty-input fallback inside the enabled label set.
-            route = self._validate(RouteDecision(label=FALLBACK_LABELS[0]), question)
+            route = self._validate(
+                RouteDecision(label=FALLBACK_LABELS[0]), question, intent_hint=intent_hint
+            )
             route.repairs.insert(0, "empty question")
             return route
         if self.strategy == "keyword":
-            return self._validate(self._keyword_decision(question), question)
+            return self._validate(
+                self._keyword_decision(question), question, intent_hint=intent_hint
+            )
 
         try:
             decision = self.model.invoke(self._prompt(question))
@@ -390,7 +417,9 @@ class Router:
             if not isinstance(decision, RouteDecision):
                 raise TypeError(f"router returned {type(decision).__name__}")
         except Exception as exc:  # noqa: BLE001 - keep an evaluation run alive
-            route = self._validate(self._keyword_decision(question), question)
+            route = self._validate(
+                self._keyword_decision(question), question, intent_hint=intent_hint
+            )
             route.repairs.insert(0, f"router model failed ({type(exc).__name__}); used keywords")
             return route
-        return self._validate(decision, question)
+        return self._validate(decision, question, intent_hint=intent_hint)

@@ -33,6 +33,7 @@ class PipelineResult:
     retrieval_queries: list[str] = field(default_factory=list)
     tool_failures: list[str] = field(default_factory=list)
     timings_ms: dict[str, int] = field(default_factory=dict)
+    trace_run_id: str | None = None
 
     @property
     def status(self) -> str:
@@ -44,6 +45,33 @@ class PipelineResult:
     @property
     def ok(self) -> bool:
         return self.status == "ok"
+
+    @property
+    def stage_errors(self) -> dict[str, str]:
+        """Stages that could not run, as opposed to running and finding nothing.
+
+        Every stage here swallows its own exception so one bad question cannot
+        end a sweep, which is right for answering and wrong for scoring: a
+        retriever whose index is gone returns no passages, and scoring that as
+        zero recall reports an outage as a weak retriever. Anything that
+        averages these rows has to drop them instead.
+        """
+        broken: dict[str, str] = {}
+        if self.translation.status in {"failed", "empty"}:
+            broken["translation"] = self.translation.note or self.translation.status
+        model_failure = next(
+            (repair for repair in self.route.repairs if repair.startswith("router model failed")),
+            None,
+        )
+        if model_failure:
+            broken["router"] = model_failure
+        if self.stats is not None and self.stats.failed:
+            broken["stats"] = self.stats.note or "stats tool failed"
+        if self.rag is not None and self.rag.failed:
+            broken["rag"] = self.rag.note or "rag tool failed"
+        if self.answer.failed:
+            broken["synthesis"] = self.answer.note or "synthesis failed"
+        return broken
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +85,7 @@ class PipelineResult:
             "tool_failures": self.tool_failures,
             "answer": self.answer.to_dict(),
             "timings_ms": self.timings_ms,
+            "trace_run_id": self.trace_run_id,
         }
 
 
@@ -68,6 +97,10 @@ def retrieval_queries_for(route: Route, translation: TranslatedQuery) -> list[st
     """
     if route.rag_query is None:
         return []
+    if any("promoted STAT to HYBRID" in repair for repair in route.repairs):
+        # Translation lost the prose half; searching its variants would repeat
+        # the same loss. The router preserved the original intent as rag_query.
+        return [route.rag_query]
     if translation.status == "disabled":
         return [translation.original]
     if not translation.translated:
@@ -124,7 +157,7 @@ class TactiStatPipeline:
         except Exception as exc:  # noqa: BLE001 - one bad question must not end a sweep
             metric = (route.stats_args or {}).get("metric") or "unknown"
             note = f"stats tool raised {type(exc).__name__}: {exc}"
-            return StatsAnswer(metric, False, [], ok=False, note=note)
+            return StatsAnswer(metric, False, [], ok=False, note=note, failed=True)
 
     def _run_rag(self, queries: list[str]) -> RagAnswer:
         try:
@@ -134,13 +167,15 @@ class TactiStatPipeline:
             return retriever.search(queries[0])
         except Exception as exc:  # noqa: BLE001 - as above
             note = f"rag tool raised {type(exc).__name__}: {exc}"
-            return RagAnswer(queries[0], "unknown", False, ok=False, note=note)
+            # failed=True so evaluation can tell an index outage from a query
+            # that legitimately matched nothing. Synthesis needs neither.
+            return RagAnswer(queries[0], "unknown", False, ok=False, failed=True, note=note)
 
     def translate(self, question: str, history: list[dict] | None = None):
         return self.translator.translate(question, history=history or None)
 
-    def route(self, query: str) -> Route:
-        return self.router.route(query)
+    def route(self, query: str, intent_hint: str | None = None) -> Route:
+        return self.router.route(query, intent_hint=intent_hint)
 
     def retrieval_queries(self, route: Route, translation: TranslatedQuery) -> list[str]:
         return retrieval_queries_for(route, translation)
@@ -201,7 +236,10 @@ class TactiStatPipeline:
     def run(self, question: str, thread_id: str | None = None) -> PipelineResult:
         """Answer one question. Pass a thread_id to continue a conversation."""
         graph, invoke_config = self._compiled(thread_id)
-        return self._result(question, graph.invoke({"question": question}, invoke_config))
+        state = graph.invoke({"question": question}, invoke_config)
+        return self._result(
+            question, state, trace_run_id=invoke_config["metadata"]["tactistat_run_id"]
+        )
 
     def stream(self, question: str, thread_id: str | None = None):
         """Yield (node, state) as each stage finishes, then the final result."""
@@ -212,9 +250,16 @@ class TactiStatPipeline:
             for node, payload in update.items():
                 final.update(payload)
                 yield node, payload
-        yield "result", self._result(question, final)
+        yield (
+            "result",
+            self._result(
+                question, final, trace_run_id=invoke_config["metadata"]["tactistat_run_id"]
+            ),
+        )
 
-    def _result(self, question: str, state: dict[str, Any]) -> PipelineResult:
+    def _result(
+        self, question: str, state: dict[str, Any], *, trace_run_id: str | None = None
+    ) -> PipelineResult:
         from tactistat.graph import timings_from
 
         stats, rag = state.get("stats"), state.get("rag")
@@ -233,4 +278,5 @@ class TactiStatPipeline:
             retrieval_queries=state.get("retrieval_queries") or [],
             tool_failures=failures,
             timings_ms=timings_from(state),
+            trace_run_id=trace_run_id,
         )

@@ -303,6 +303,48 @@ def test_a_router_failure_degrades_to_the_keyword_baseline(config):
     assert "used keywords" in route.repairs[0]
 
 
+def test_router_failure_preserves_xg_and_strips_an_english_possessive(config):
+    """Live eval exposed both bugs in one fallback for ``stat-en-03``."""
+    router = Router(config, model=exploding(RuntimeError("provider rejected output")))
+    route = router.route("What was Kylian Mbappe's total expected goals at the World Cup?")
+
+    assert route.label == "STAT"
+    assert route.stats_args["metric"] == "xg"
+    assert route.stats_args["players"] == ["Kylian Mbappe"]
+
+
+def test_a_numeric_only_model_route_is_promoted_when_the_question_also_asks_for_prose(config):
+    decision = RouteDecision(
+        label="STAT", operation="player", metric="assists", players=["Lionel Messi"]
+    )
+    route = Router(config, model=fake(decision)).route(
+        "How many assists did Lionel Messi record, and what about his style helps create chances?"
+    )
+
+    assert route.label == "HYBRID"
+    assert route.stats_args["metric"] == "assists"
+    assert route.rag_query
+    assert any("promoted STAT to HYBRID" in repair for repair in route.repairs)
+
+
+def test_original_intent_repairs_a_rewrite_that_dropped_the_prose_half(config):
+    """The graph keeps mixed intent even when translation rewrites only the number."""
+    from tactistat.pipeline import retrieval_queries_for
+
+    original = "How many assists did Messi record, and what about his style helps create chances?"
+    rewrite = "How many assists did Lionel Messi record at the 2022 FIFA World Cup?"
+    decision = RouteDecision(
+        label="STAT", operation="player", metric="assists", players=["Lionel Messi"]
+    )
+
+    route = Router(config, model=fake(decision)).route(rewrite, intent_hint=original)
+    translation = TranslatedQuery(original, rewrite, "en", "rewrite", [rewrite])
+
+    assert route.label == "HYBRID"
+    assert route.rag_query == original
+    assert retrieval_queries_for(route, translation) == [original]
+
+
 @pytest.mark.parametrize(
     ("question", "label"),
     [
@@ -408,7 +450,7 @@ def test_prose_with_no_citation_at_all_is_flagged_as_unsupported(config):
     answer = Synthesizer(config, model=fake(reply)).answer(
         "Morocco defence?", rag_context="RAG TOOL — 2 passages", n_passages=2
     )
-    assert answer.ok is False and "cites no retrieved passage" in answer.note
+    assert answer.ok is False and "uncited claim" in answer.note
 
 
 def test_a_stats_answer_needs_no_bracket_when_nothing_was_retrieved(config):
@@ -422,7 +464,11 @@ def test_a_stats_answer_needs_no_bracket_when_nothing_was_retrieved(config):
 
 
 def test_a_hybrid_answer_citing_nothing_is_not_rescued_by_its_stats_block(config):
-    """Passages were retrieved, so the prose beside the number must cite one."""
+    """Passages were retrieved, so the prose beside the number must cite one.
+
+    The stats clause is exempt and the prose clause is not, so the note names
+    the half that is unsupported rather than the whole answer.
+    """
     reply = AIMessage(content="Messi scored 7 goals and was the tournament's best player.")
     answer = Synthesizer(config, model=fake(reply)).answer(
         "Was Messi the best?",
@@ -430,7 +476,7 @@ def test_a_hybrid_answer_citing_nothing_is_not_rescued_by_its_stats_block(config
         rag_context="RAG TOOL — 2 passages",
         n_passages=2,
     )
-    assert answer.ok is False and "cites no retrieved passage" in answer.note
+    assert answer.ok is False and "uncited claim" in answer.note
 
 
 def test_a_citation_on_one_sentence_does_not_cover_the_next(config):
@@ -466,6 +512,46 @@ def test_a_sentence_restating_stats_numbers_needs_no_bracket(config):
         rag_context="RAG TOOL — 1 passage\n[1] Morocco conceded few goals.",
         n_passages=1,
     )
+    assert answer.ok is True
+
+
+def test_a_stats_sentence_may_repeat_the_question_year_without_a_citation(config):
+    reply = AIMessage(
+        content="Morocco scored 6 goals at the 2022 World Cup. Their run was historic [1]."
+    )
+    answer = Synthesizer(config, model=fake(reply)).answer(
+        "Morocco goals and historic run?",
+        stats_context="STATS TOOL — goals\n  scope: Morocco\n  Morocco: 6 goals in total",
+        rag_context="RAG TOOL — 1 passage\n[1] Morocco were the first African semi-finalists.",
+        n_passages=1,
+    )
+
+    assert answer.ok is True
+
+
+def test_an_exact_two_player_gap_is_a_supported_derived_stat(config):
+    from tactistat.stats_tool.query import PlayerRow, StatsAnswer, claimable_values
+
+    stats = StatsAnswer(
+        "pass_accuracy",
+        False,
+        [
+            PlayerRow(1, "Lionel Messi", "Argentina", 0.824797844, 690, 7),
+            PlayerRow(2, "Kylian Mbappe", "France", 0.772532189, 597, 7),
+        ],
+    )
+    reply = AIMessage(
+        content=(
+            "Messi completed 82.48% of his passes and Mbappe completed 77.25%, "
+            "a difference of 5.23 percentage points."
+        )
+    )
+    answer = Synthesizer(config, model=fake(reply)).answer(
+        "Compare their passing accuracy.",
+        stats_context=stats.to_context(),
+        stats_claims=claimable_values(stats),
+    )
+
     assert answer.ok is True
 
 
@@ -907,6 +993,25 @@ def test_the_right_count_still_passes(config):
     assert answer.ok is True and answer.note is None
 
 
+def test_a_number_cannot_be_relabelled_as_a_metric_the_tool_never_computed(config):
+    evidence = "STATS TOOL — goals\n  Lionel Messi (Argentina): 7.00"
+    answer = Synthesizer(config, model=fake(AIMessage(content="Messi recorded 7 assists."))).answer(
+        "Messi assists?", stats_context=evidence, stats_claims={"goals": {7.0}}
+    )
+
+    assert answer.ok is False and "7 assists" in answer.note
+
+
+@pytest.mark.parametrize("claim", ["Messi scored nine goals.", "Messi ghi chín bàn thắng."])
+def test_a_spelled_number_cannot_bypass_digit_fidelity(config, claim):
+    evidence = "STATS TOOL — goals\n  Lionel Messi (Argentina): 7.00"
+    answer = Synthesizer(config, model=fake(AIMessage(content=claim))).answer(
+        "Messi goals?", stats_context=evidence, stats_claims={"goals": {7.0}}
+    )
+
+    assert answer.ok is False and "copied as digits" in answer.note
+
+
 def test_an_invented_scoreline_does_not_hide_inside_punctuation(config):
     """ "8-0" escaped the standalone-number regex entirely."""
     evidence = "RAG TOOL — 1 passage\n[1] Argentina beat Poland 2-0 in the group stage."
@@ -921,7 +1026,7 @@ def test_an_abstention_cannot_carry_an_uncited_claim(config):
     answer = Synthesizer(config, model=fake(reply)).answer(
         "Morocco press?", rag_context="RAG TOOL — 2 passages", n_passages=2
     )
-    assert answer.ok is False and "cites no retrieved passage" in answer.note
+    assert answer.ok is False and "uncited claim" in answer.note
 
 
 # Pipeline status
@@ -1217,7 +1322,7 @@ def _stub_stages(order):
             self.seen_history = list(history)
             return TranslatedQuery(question, question, "en", "rewrite", [question])
 
-        def route(self, query):
+        def route(self, query, intent_hint=None):
             order.append("route")
             return Route(
                 "HYBRID",
@@ -1270,7 +1375,9 @@ def test_the_route_label_decides_which_branches_run(label, expected):
     stub = _stub_stages(order)
     stats_args = {"operation": "ranking", "metric": "goals"} if label != "TACTICAL" else None
     rag_query = "q" if label != "STAT" else None
-    stub.route = lambda query: Route(label, query, "few_shot", stats_args, rag_query)
+    stub.route = lambda query, intent_hint=None: Route(
+        label, query, "few_shot", stats_args, rag_query
+    )
 
     build_graph(stub).invoke({"question": "q"})
     assert set(order) - {"translate", "route", "synthesize"} == expected
@@ -1306,7 +1413,7 @@ def test_a_follow_up_cannot_inherit_the_previous_turn_s_evidence():
     graph.invoke({"question": "Was Messi best?"}, thread)
 
     # A STAT-only follow-up must not still be carrying the earlier passages.
-    stub.route = lambda query: Route(
+    stub.route = lambda query, intent_hint=None: Route(
         "STAT", query, "few_shot", {"operation": "ranking", "metric": "goals"}, None
     )
     state = graph.invoke({"question": "How many goals did Mbappe score?"}, thread)
@@ -1371,7 +1478,9 @@ def _stubbed_pipeline(config, seen=None):
         return TranslatedQuery(question, question, "en", "rewrite", [question])
 
     pipeline.translate = record
-    pipeline.route = lambda query: Route("TACTICAL", query, "few_shot", rag_query=query)
+    pipeline.route = lambda query, intent_hint=None: Route(
+        "TACTICAL", query, "few_shot", rag_query=query
+    )
     pipeline.run_rag = lambda queries: RagAnswer(queries[0], "dense", True, passages=[])
     pipeline.synthesize = lambda *args: Answer("q", "An answer.", cited=[])
     return pipeline
@@ -1400,6 +1509,15 @@ def test_each_invocation_gets_a_trace_group_id(config):
     assert first["metadata"]["tactistat_run_id"] != second["metadata"]["tactistat_run_id"]
 
 
+def test_the_trace_group_id_is_exposed_on_the_result(config):
+    pipeline = _stubbed_pipeline(config)
+    first = pipeline.run("first")
+    second = pipeline.run("second")
+    assert first.trace_run_id and second.trace_run_id
+    assert first.trace_run_id != second.trace_run_id
+    assert first.to_dict()["trace_run_id"] == first.trace_run_id
+
+
 def test_stream_yields_every_node_then_the_finished_result(config):
     """`--stream` is the only path that builds its result without the checkpointer."""
     from tactistat.pipeline import PipelineResult
@@ -1413,6 +1531,7 @@ def test_stream_yields_every_node_then_the_finished_result(config):
     assert isinstance(result, PipelineResult)
     # The same result `run` would have returned, assembled from the updates.
     assert result.answer.text == "An answer." and result.route.label == "TACTICAL"
+    assert result.trace_run_id
     assert result.retrieval_queries and result.timings_ms["total"] >= 0
 
 
@@ -1602,7 +1721,12 @@ def test_the_file_tracer_records_a_call_and_its_result(tmp_path):
         [[AIMessage(content="hello")]],
         run_id="r1",
         parent_run_id="parent",
-        metadata={"tactistat_run_id": "pipeline-1", "langgraph_node": "translate"},
+        metadata={
+            "tactistat_run_id": "pipeline-1",
+            "tactistat_eval_item_id": "hybrid-en-01",
+            "tactistat_eval_call_id": "judge-1",
+            "langgraph_node": "translate",
+        },
     )
     handler.on_llm_end(
         LLMResult(generations=[[ChatGeneration(message=AIMessage(content="7 goals"))]]),
@@ -1613,6 +1737,8 @@ def test_the_file_tracer_records_a_call_and_its_result(tmp_path):
     assert lines[0]["model"] == "ChatOpenAI"
     assert lines[0]["parent_run_id"] == "parent"
     assert lines[0]["pipeline_run_id"] == "pipeline-1"
+    assert lines[0]["evaluation_item_id"] == "hybrid-en-01"
+    assert lines[0]["evaluation_call_id"] == "judge-1"
     assert lines[0]["node"] == "translate"
     assert lines[0]["timestamp"] and lines[1]["timestamp"]
     assert lines[1]["output"] == ["7 goals"]
@@ -1648,3 +1774,107 @@ def test_graph_callbacks_reach_nested_model_calls(tmp_path):
     assert [line["event"] for line in lines] == ["call", "result"]
     assert lines[0]["pipeline_run_id"] == "pipeline-1"
     assert lines[0]["node"] == "translate"
+
+
+def test_an_all_stats_answer_is_not_failed_for_citing_no_passage(config):
+    """A HYBRID question the numbers fully answer is incomplete, not unsupported.
+
+    `ok` means every claim has evidence behind it. Requiring a bracket merely
+    because passages were retrieved failed a correct, fully stats-backed answer
+    — the per-clause rule already exempts exactly these clauses.
+    """
+    reply = AIMessage(
+        content="Mbappé averaged 1.21 goals per 90. Messi averaged 0.91 goals per 90."
+    )
+    answer = Synthesizer(config, model=fake(reply)).answer(
+        "Compare Messi and Mbappé per 90",
+        stats_context=(
+            "STATS TOOL — goals per 90\n"
+            "  Kylian Mbappé (France): 1.21\n  Lionel Messi (Argentina): 0.91"
+        ),
+        rag_context="RAG TOOL — 5 passages\n[1] Messi won the Golden Ball.",
+        n_passages=5,
+    )
+    assert answer.ok is True and answer.cited == []
+
+
+ABSTENTION_TEXTS = [
+    "The provided sources contain no information about the concept of a high press",
+    "The provided passages do not contain information about attacking full-backs",
+    "– the sources provide Argentina's total of 15 goals but do not state the scoreline",
+    "The provided passages do not mention the style of play associated with Spain",
+]
+
+
+@pytest.mark.parametrize("text", ABSTENTION_TEXTS)
+def test_an_abstention_may_name_what_the_evidence_lacks(text):
+    """The prompt asks for this sentence; flagging it penalises obedience.
+
+    Taken verbatim from the baseline run, where all four abstentions were scored
+    as unsupported answers for saying why they abstained.
+    """
+    from tactistat.synthesis.synthesize import uncited_claims
+
+    assert uncited_claims(text, n_passages=5, stats_values={15.0}, abstained=True) == []
+    # Outside an abstention the same sentence is an ordinary uncited claim.
+    assert uncited_claims(text, n_passages=5, stats_values={15.0}) != []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Messi scored 999 goals. The evidence is thin.",
+        "Morocco pressed high up the pitch. The passages say little else.",
+    ],
+)
+def test_an_abstention_still_cannot_smuggle_a_football_claim(text):
+    """Only the sentence about the evidence is exempt, not the one beside it."""
+    from tactistat.synthesis.synthesize import uncited_claims
+
+    loose = uncited_claims(text, n_passages=5, stats_values=set(), abstained=True)
+    assert len(loose) == 1 and "evidence" not in loose[0] and "passages" not in loose[0]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Messi's assist total was 7.",
+        "For assists, Messi recorded 7.",
+    ],
+)
+def test_a_metric_named_before_its_number_is_still_a_claim(sentence):
+    """English binds a number either side of the metric; one matcher read one side."""
+    from tactistat.synthesis.synthesize import unsupported_metric_claims
+
+    assert unsupported_metric_claims(sentence, {"goals": {7.0}}) == ["7 assists"]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Messi's goal total was nine.",
+        "The number of goals was nine.",
+    ],
+)
+def test_a_number_word_after_its_metric_still_breaks_digit_fidelity(sentence):
+    from tactistat.synthesis.synthesize import word_number_claims
+
+    assert word_number_claims(sentence)
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Di María led the tournament with 3.10 key passes per 90.",
+        "Bàn thắng này là bàn thứ hai của Argentina.",
+        "Messi scored 7 goals at the 2022 FIFA World Cup.",
+        "He took 4 shots. He then scored 7 goals.",
+    ],
+)
+def test_the_reverse_matchers_do_not_invent_claims(sentence):
+    """A per-90 unit, an ordinal, a date, and a sentence boundary are not claims."""
+    from tactistat.synthesis.synthesize import unsupported_metric_claims, word_number_claims
+
+    claims = {"goals": {7.0}, "key_passes": {3.10, 3.00, 2.84}, "shots": {4.0}}
+    assert unsupported_metric_claims(sentence, claims) == []
+    assert word_number_claims(sentence) == []

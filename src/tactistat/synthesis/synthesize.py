@@ -11,6 +11,7 @@ from langchain_core.runnables import Runnable
 
 from tactistat.config import Config
 from tactistat.llm.registry import chat_model
+from tactistat.stats_tool.query import DERIVED_CLAIMS_KEY
 
 ABSTAIN_TOKEN = "INSUFFICIENT_EVIDENCE"
 # Accept up to three digits so stray brackets such as [597] can be rejected.
@@ -36,6 +37,34 @@ _CLAUSE_BOUNDARY_RE = re.compile(
 )
 _COORDINATING_JOINS = frozenset({"and", "và"})
 MIN_ANSWER_CHARS = 15
+# The gap between a metric and its number may cross a comma but never a full
+# stop: "shots. He took 3 corners" is two claims, and reading it as one would
+# bind a number to a metric in the previous sentence.
+_GAP = r"[\s,;:'’\"()\-–—]+"
+_GAP_WORD = r"(?!\d)[^\s.!?]+"
+# "3.10 key passes per 90" states a unit, not ninety key passes, and "bàn thứ
+# hai" is the second goal, not two goals. Both only appear when the metric
+# comes first, which is why reading that direction needs them.
+_PER_UNIT_RE = re.compile(r"(?:\bper\b|\bmỗi\b|/)[\s]*$", re.IGNORECASE)
+_ORDINAL_MARK_RE = re.compile(r"\bthứ[\s]*$", re.IGNORECASE)
+_NUMBER_WORDS = (
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
+    "fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy "
+    "eighty ninety hundred không một mốt hai ba bốn tư năm lăm sáu bảy tám chín mười "
+    "mươi trăm"
+).split()
+_NUMBER_CONNECTORS = ("and", "linh", "lẻ")
+# Sentences that talk about the evidence rather than about football. Recognised
+# only inside an abstention, where the prompt explicitly asks the model to name
+# what is missing: flagging that sentence penalises the model for obeying the
+# instruction it was given. Scoped to the whole sentence, not the clause,
+# because the clause splitter separates "the sources provide X" from "but do
+# not state Y" and only the first half carries the noun.
+_ABOUT_EVIDENCE_RE = re.compile(
+    r"\b(evidence|passages?|sources?|documents?|"
+    r"bằng chứng|tài liệu|nguồn|đoạn (?:văn|trích))\b",
+    re.IGNORECASE,
+)
 # Non-claims that need no evidence.
 ACKNOWLEDGEMENTS = frozenset(
     {"yes", "no", "correct", "incorrect", "đúng", "sai", "không", "có", "đúng vậy"}
@@ -49,6 +78,14 @@ METRIC_SURFACE: dict[str, tuple[str, ...]] = {
     "shots": ("shot", "shots", "cú sút", "sút"),
     "passes_attempted": ("passes", "passes attempted", "đường chuyền"),
     "passes_completed": ("completed passes", "đường chuyền chính xác"),
+    "pass_accuracy": (
+        "pass accuracy",
+        "passing accuracy",
+        "pass completion",
+        "percentage point",
+        "percentage points",
+        "điểm phần trăm",
+    ),
     "key_passes": ("key pass", "key passes", "đường chuyền quyết định"),
     "dribbles_completed": ("dribble", "dribbles", "pha rê bóng"),
     "tackles": ("tackle", "tackles", "pha tắc bóng"),
@@ -66,7 +103,9 @@ below, and from nothing else.
 Rules:
 - Use only the evidence. Never add a fact, number or name that is not in it.
 - Copy numbers from the STATS TOOL block exactly, digit for digit, keeping the
-  decimal point as written. Do not round, recompute or reformat them.
+  decimal point as written. The only new number you may compute is the exact
+  difference between two displayed values in a comparison; do not otherwise
+  round, recompute or reformat numbers.
 - {citation_rule}
 - If the evidence does not answer the question, reply with {abstain} followed by
   one sentence naming what is missing.
@@ -103,6 +142,10 @@ class Answer:
     abstained: bool = False
     note: str | None = None
     ok: bool = True
+    # An abstention because the evidence did not answer the question, and an
+    # abstention because the model could not be reached, look identical here.
+    # Only the second one means the system was never measured.
+    failed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,35 +198,84 @@ def evidence_values(evidence: str) -> set[float]:
     }
 
 
-def _surface_index() -> tuple[re.Pattern[str], dict[str, str]]:
-    """Build one longest-first matcher so the nearest metric owns each number."""
+def _surface_index() -> tuple[re.Pattern[str], re.Pattern[str], dict[str, str]]:
+    """Build longest-first matchers so the nearest metric owns each number.
+
+    English binds a number to a metric in either order — "7 assists" and "his
+    assist total was 7" say the same thing — so a guard that reads only one
+    direction is a guard the second phrasing walks through.
+    """
     lookup = {word.lower(): metric for metric, words in METRIC_SURFACE.items() for word in words}
     alternation = "|".join(re.escape(word) for word in sorted(lookup, key=len, reverse=True))
     # A short nonnumeric gap avoids binding 2022 to a later goal count.
-    pattern = re.compile(
+    forward = re.compile(
         rf"(\d+(?:[.,]\d+)?)\s+((?:(?!\d)\S+\s+){{0,2}}?)({alternation})\b", re.IGNORECASE
     )
-    return pattern, lookup
+    reverse = re.compile(
+        rf"({alternation})\b((?:{_GAP}{_GAP_WORD}){{0,2}}?){_GAP}(\d+(?:[.,]\d+)?)", re.IGNORECASE
+    )
+    return forward, reverse, lookup
 
 
-_CLAIM_RE, _SURFACE_TO_METRIC = _surface_index()
+_CLAIM_RE, _REVERSE_CLAIM_RE, _SURFACE_TO_METRIC = _surface_index()
+_METRIC_SURFACE_PATTERN = "|".join(
+    re.escape(word) for word in sorted(_SURFACE_TO_METRIC, key=len, reverse=True)
+)
+_NUMBER_WORD_PHRASE = (
+    rf"(?:{'|'.join(_NUMBER_WORDS)})(?:[\s\-‑]+(?:"
+    rf"{'|'.join((*_NUMBER_WORDS, *_NUMBER_CONNECTORS))})){{0,5}}"
+)
+_NUMBER_WORD_RE = re.compile(
+    rf"\b({_NUMBER_WORD_PHRASE})\s+(?:{_METRIC_SURFACE_PATTERN})\b", re.IGNORECASE
+)
+# "his goal total was nine" spells a number out just as "nine goals" does, and
+# the digit-for-digit rule has to see both or it only covers one word order.
+_REVERSE_NUMBER_WORD_RE = re.compile(
+    rf"\b(?:{_METRIC_SURFACE_PATTERN})\b((?:{_GAP}{_GAP_WORD}){{0,2}}?{_GAP})"
+    rf"({_NUMBER_WORD_PHRASE})\b",
+    re.IGNORECASE,
+)
 
 
 def unsupported_metric_claims(text: str, claims: dict[str, set[float]]) -> list[str]:
     """Find values that the answer binds to the wrong stats metric."""
+    if not claims:
+        return []
     wrong: list[str] = []
-    for match in _CLAIM_RE.finditer(text):
-        token, surface = match.group(1), match.group(3).lower()
-        metric = _SURFACE_TO_METRIC.get(surface)
-        allowed = claims.get(metric or "")
-        if not allowed:
+    # (token, surface, is_reverse). "2023 goals" claims a count and must be
+    # caught; "goals at the 2022 World Cup" names a date and must not. Only the
+    # reverse reading can put a year where a count would go, so only it skips
+    # them — applying the skip to both directions would open the first case.
+    found = [(m.group(1), m.group(3), False) for m in _CLAIM_RE.finditer(text)]
+    found += [
+        (m.group(3), m.group(1), True)
+        for m in _REVERSE_CLAIM_RE.finditer(text)
+        if not _PER_UNIT_RE.search(m.group(2))
+    ]
+    for token, surface, reverse in found:
+        metric = _SURFACE_TO_METRIC.get(surface.lower())
+        if metric is None:
             continue
+        if reverse and _YEAR_RE.match(token):
+            continue
+        allowed = claims.get(metric)
         value = _numeric_value(token)
-        if value is not None and value not in allowed:
+        if value is not None and (allowed is None or value not in allowed):
             claim = f"{token} {metric}"
             if claim not in wrong:
                 wrong.append(claim)
     return wrong
+
+
+def word_number_claims(text: str) -> list[str]:
+    """Numbers written as words cannot satisfy the digit-for-digit contract."""
+    matches = [match.group(0) for match in _NUMBER_WORD_RE.finditer(text)]
+    matches += [
+        match.group(0)
+        for match in _REVERSE_NUMBER_WORD_RE.finditer(text)
+        if not _ORDINAL_MARK_RE.search(match.group(1)) and not _PER_UNIT_RE.search(match.group(1))
+    ]
+    return list(dict.fromkeys(matches))
 
 
 def claim_sentences(text: str) -> list[str]:
@@ -204,9 +296,13 @@ def claim_sentences(text: str) -> list[str]:
 
 
 def _numbers_in(text: str) -> set[float]:
+    # Citation ranks and years are context, not quantities asserted by a stats
+    # sentence. unsupported_numbers() follows the same year rule.
+    text = _CITE_RE.sub("", text)
     return {
         value
         for token in _ANY_NUMBER_RE.findall(text)
+        if not _YEAR_RE.match(token)
         if (value := _numeric_value(token)) is not None
     }
 
@@ -264,7 +360,9 @@ def _uncited_in(sentence: str, stats_values: set[float]) -> list[str]:
     return uncited
 
 
-def uncited_claims(text: str, n_passages: int, stats_values: set[float]) -> list[str]:
+def uncited_claims(
+    text: str, n_passages: int, stats_values: set[float], *, abstained: bool = False
+) -> list[str]:
     """Find clauses with neither a citation nor a supported stats value.
 
     This checks attribution only; the evaluation judge checks entailment.
@@ -274,6 +372,7 @@ def uncited_claims(text: str, n_passages: int, stats_values: set[float]) -> list
     return [
         clause
         for sentence in claim_sentences(text)
+        if not (abstained and _ABOUT_EVIDENCE_RE.search(sentence))
         for clause in _uncited_in(sentence, stats_values)
     ]
 
@@ -288,9 +387,11 @@ def reformatted_numbers(text: str, evidence: str) -> list[str]:
     ]
 
 
-def unsupported_numbers(text: str, evidence: str) -> list[str]:
+def unsupported_numbers(
+    text: str, evidence: str, *, derived_values: set[float] | None = None
+) -> list[str]:
     """Find unsupported standalone values and scoreline components."""
-    known = evidence_values(evidence)
+    known = evidence_values(evidence) | (derived_values or set())
     invented: list[str] = []
     claimed = _NUMBER_RE.findall(text) + [
         half for match in _SCORELINE_RE.findall(text) for half in match
@@ -354,7 +455,7 @@ class Synthesizer:
             reply = self.model.invoke(prompt)
         except Exception as exc:  # noqa: BLE001 - keep an evaluation run alive
             note = f"synthesis failed: {type(exc).__name__}: {exc}"
-            return Answer(question, NO_EVIDENCE, abstained=True, ok=False, note=note)
+            return Answer(question, NO_EVIDENCE, abstained=True, ok=False, note=note, failed=True)
 
         # Gemini returns content as a list of blocks, not a string.
         text = (getattr(reply, "text", None) or getattr(reply, "content", reply) or "").strip()
@@ -382,7 +483,16 @@ class Synthesizer:
             notes.append(f"claim(s) the stats tool never computed: {', '.join(misattributed)}")
             ok = False
 
-        invented = unsupported_numbers(text, evidence)
+        spelled = word_number_claims(text)
+        if spelled:
+            notes.append(f"number(s) must be copied as digits: {', '.join(spelled)}")
+            ok = False
+
+        invented = unsupported_numbers(
+            text,
+            evidence,
+            derived_values=(stats_claims or {}).get(DERIVED_CLAIMS_KEY, set()),
+        )
         if invented:
             notes.append(f"number(s) not found in the evidence: {', '.join(invented)}")
             ok = False
@@ -391,13 +501,16 @@ class Synthesizer:
             if restyled:
                 notes.append(f"number(s) reformatted from the tool output: {', '.join(restyled)}")
 
-        # Stats evidence cannot support uncited retrieved prose.
-        if self.require_citations and n_passages and not cited:
-            notes.append("answer cites no retrieved passage")
-            ok = False
-        elif self.require_citations:
-            # Check support per clause, not merely once per answer.
-            loose = uncited_claims(text, n_passages, evidence_values(stats_context or ""))
+        # Support is decided per clause, and only per clause. An "answer cited
+        # nothing" rule on top of this reads a HYBRID answer that happens to be
+        # fully answerable from the stats block as unsupported, when every
+        # clause in it restates a number the tool computed. Not citing a
+        # retrieved passage is an incompleteness — the judge's question — and
+        # `ok` is about whether each claim has evidence behind it.
+        if self.require_citations:
+            loose = uncited_claims(
+                text, n_passages, evidence_values(stats_context or ""), abstained=abstained
+            )
             if loose:
                 shown = "; ".join(sentence[:60] for sentence in loose[:3])
                 notes.append(f"{len(loose)} uncited claim(s): {shown}")

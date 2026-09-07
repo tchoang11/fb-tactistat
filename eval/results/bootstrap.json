@@ -1,0 +1,435 @@
+{
+  "schema_version": 1,
+  "artifact": "bootstrap_intervals",
+  "metric": "goals",
+  "per90": true,
+  "settings": {
+    "n_resamples": 10000,
+    "confidence_level": 0.95,
+    "seed": 42,
+    "resampling_unit": "match"
+  },
+  "dataset_fingerprint": "81f8018d8cbc8e79",
+  "matches_fingerprint": "cc9d7ea6f49e7bdf",
+  "min_minutes_for_per90": 270,
+  "players": [
+    {
+      "query": "Kylian Mbappe",
+      "player_id": 3009,
+      "player_name": "Kylian Mbappé Lottin",
+      "match_ids": [
+        3857266,
+        3857275,
+        3857279,
+        3869152,
+        3869354,
+        3869552,
+        3869685
+      ],
+      "matches": [
+        {
+          "match_id": 3857266,
+          "goals": 2.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3857275,
+          "goals": 0.0,
+          "minutes": 27.4167
+        },
+        {
+          "match_id": 3857279,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869152,
+          "goals": 2.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869354,
+          "goals": 0.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869552,
+          "goals": 0.0,
+          "minutes": 89.2833
+        },
+        {
+          "match_id": 3869685,
+          "goals": 3.0,
+          "minutes": 120.0
+        }
+      ],
+      "minutes": 596.7,
+      "total": 8.0,
+      "per90": 1.2066365007541477,
+      "eligible": true,
+      "ineligible_reason": null,
+      "interval": {
+        "point": 1.2066365007541477,
+        "low": 0.4300268321460203,
+        "high": 1.8647893816023704,
+        "confidence": 0.95,
+        "n_matches": 7,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "query": "Lionel Messi",
+      "player_id": 5503,
+      "player_name": "Lionel Andrés Messi Cuccittini",
+      "match_ids": [
+        3857264,
+        3857289,
+        3857300,
+        3869151,
+        3869321,
+        3869519,
+        3869685
+      ],
+      "matches": [
+        {
+          "match_id": 3857264,
+          "goals": 0.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3857289,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3857300,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869151,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869321,
+          "goals": 1.0,
+          "minutes": 120.0
+        },
+        {
+          "match_id": 3869519,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869685,
+          "goals": 2.0,
+          "minutes": 119.8667
+        }
+      ],
+      "minutes": 689.8667,
+      "total": 7.0,
+      "per90": 0.9132199017578323,
+      "eligible": true,
+      "ineligible_reason": null,
+      "interval": {
+        "point": 0.9132199017578323,
+        "low": 0.5455619783097514,
+        "high": 1.200640181344693,
+        "confidence": 0.95,
+        "n_matches": 7,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "query": "Olivier Giroud",
+      "player_id": 3604,
+      "player_name": "Olivier Giroud",
+      "match_ids": [
+        3857266,
+        3857279,
+        3869152,
+        3869354,
+        3869552,
+        3869685
+      ],
+      "matches": [
+        {
+          "match_id": 3857266,
+          "goals": 0.0,
+          "minutes": 61.9833
+        },
+        {
+          "match_id": 3857279,
+          "goals": 2.0,
+          "minutes": 88.5833
+        },
+        {
+          "match_id": 3869152,
+          "goals": 1.0,
+          "minutes": 75.8
+        },
+        {
+          "match_id": 3869354,
+          "goals": 1.0,
+          "minutes": 90.0
+        },
+        {
+          "match_id": 3869552,
+          "goals": 0.0,
+          "minutes": 64.75
+        },
+        {
+          "match_id": 3869685,
+          "goals": 0.0,
+          "minutes": 41.0167
+        }
+      ],
+      "minutes": 422.1333,
+      "total": 4.0,
+      "per90": 0.8528111854715086,
+      "eligible": true,
+      "ineligible_reason": null,
+      "interval": {
+        "point": 0.8528111854715086,
+        "low": 0.2323895612813369,
+        "high": 1.4507357345830614,
+        "confidence": 0.95,
+        "n_matches": 6,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "query": "Julian Alvarez",
+      "player_id": 29560,
+      "player_name": "Julián Álvarez",
+      "match_ids": [
+        3857264,
+        3857289,
+        3857300,
+        3869151,
+        3869321,
+        3869519,
+        3869685
+      ],
+      "matches": [
+        {
+          "match_id": 3857264,
+          "goals": 1.0,
+          "minutes": 78.0833
+        },
+        {
+          "match_id": 3857289,
+          "goals": 0.0,
+          "minutes": 27.5667
+        },
+        {
+          "match_id": 3857300,
+          "goals": 0.0,
+          "minutes": 31.75
+        },
+        {
+          "match_id": 3869151,
+          "goals": 1.0,
+          "minutes": 71.0
+        },
+        {
+          "match_id": 3869321,
+          "goals": 0.0,
+          "minutes": 80.9167
+        },
+        {
+          "match_id": 3869519,
+          "goals": 2.0,
+          "minutes": 73.7833
+        },
+        {
+          "match_id": 3869685,
+          "goals": 0.0,
+          "minutes": 101.8167
+        }
+      ],
+      "minutes": 464.9167,
+      "total": 4.0,
+      "per90": 0.7743322621020067,
+      "eligible": true,
+      "ineligible_reason": null,
+      "interval": {
+        "point": 0.7743322621020067,
+        "low": 0.16303358401256446,
+        "high": 1.4988437913993597,
+        "confidence": 0.95,
+        "n_matches": 7,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "left": "Kylian Mbappé Lottin",
+      "right": "Lionel Andrés Messi Cuccittini",
+      "shared_match_ids": [
+        3869685
+      ],
+      "paired": {
+        "point": 0.29341659899631545,
+        "low": -0.33607475221528316,
+        "high": 0.9326213849529305,
+        "confidence": 0.95,
+        "n_matches": 13,
+        "n_resamples": 10000,
+        "n_shared": 1
+      },
+      "independent": {
+        "point": 0.29341659899631545,
+        "low": -0.5572935280660624,
+        "high": 1.0568468291937623,
+        "confidence": 0.95,
+        "n_matches": 14,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "left": "Kylian Mbappé Lottin",
+      "right": "Olivier Giroud",
+      "shared_match_ids": [
+        3857266,
+        3857279,
+        3869152,
+        3869354,
+        3869552,
+        3869685
+      ],
+      "paired": {
+        "point": 0.35382531528263916,
+        "low": -0.6305238170890043,
+        "high": 1.4636098051648958,
+        "confidence": 0.95,
+        "n_matches": 7,
+        "n_resamples": 10000,
+        "n_shared": 6
+      },
+      "independent": {
+        "point": 0.35382531528263916,
+        "low": -0.6521019787966923,
+        "high": 1.323195029829797,
+        "confidence": 0.95,
+        "n_matches": 13,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "left": "Kylian Mbappé Lottin",
+      "right": "Julián Álvarez",
+      "shared_match_ids": [
+        3869685
+      ],
+      "paired": {
+        "point": 0.43230423865214107,
+        "low": -0.4108446997057713,
+        "high": 1.2953476011085348,
+        "confidence": 0.95,
+        "n_matches": 13,
+        "n_resamples": 10000,
+        "n_shared": 1
+      },
+      "independent": {
+        "point": 0.43230423865214107,
+        "low": -0.6800631131171674,
+        "high": 1.382143638965995,
+        "confidence": 0.95,
+        "n_matches": 14,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "left": "Lionel Andrés Messi Cuccittini",
+      "right": "Olivier Giroud",
+      "shared_match_ids": [
+        3869685
+      ],
+      "paired": {
+        "point": 0.060408716286323716,
+        "low": -0.5823047427702328,
+        "high": 0.7294113047954175,
+        "confidence": 0.95,
+        "n_matches": 12,
+        "n_resamples": 10000,
+        "n_shared": 1
+      },
+      "independent": {
+        "point": 0.060408716286323716,
+        "low": -0.6331096800884168,
+        "high": 0.7942521502778563,
+        "confidence": 0.95,
+        "n_matches": 13,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "left": "Lionel Andrés Messi Cuccittini",
+      "right": "Julián Álvarez",
+      "shared_match_ids": [
+        3857264,
+        3857289,
+        3857300,
+        3869151,
+        3869321,
+        3869519,
+        3869685
+      ],
+      "paired": {
+        "point": 0.13888763965582562,
+        "low": -0.7371603060912054,
+        "high": 0.960170654330963,
+        "confidence": 0.95,
+        "n_matches": 7,
+        "n_resamples": 10000,
+        "n_shared": 7
+      },
+      "independent": {
+        "point": 0.13888763965582562,
+        "low": -0.6905805363960531,
+        "high": 0.8553149992337469,
+        "confidence": 0.95,
+        "n_matches": 14,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    },
+    {
+      "left": "Olivier Giroud",
+      "right": "Julián Álvarez",
+      "shared_match_ids": [
+        3869685
+      ],
+      "paired": {
+        "point": 0.07847892336950191,
+        "low": -0.8126038005931955,
+        "high": 0.9373677772930363,
+        "confidence": 0.95,
+        "n_matches": 12,
+        "n_resamples": 10000,
+        "n_shared": 1
+      },
+      "independent": {
+        "point": 0.07847892336950191,
+        "low": -0.9238330240083455,
+        "high": 0.9640136957384547,
+        "confidence": 0.95,
+        "n_matches": 13,
+        "n_resamples": 10000,
+        "n_shared": 0
+      }
+    }
+  ],
+  "output_path": "eval/results/bootstrap.json"
+}

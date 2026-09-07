@@ -72,6 +72,12 @@ class RagAnswer:
     passages: list[Passage] = field(default_factory=list)
     note: str | None = None
     ok: bool = True
+    # `ok` is false for two unrelated events: the index was searched and matched
+    # nothing, and the index could not be searched at all. Synthesis treats both
+    # as "no evidence" and is right to; evaluation must not, because the first
+    # is a measured zero and the second is the absence of a measurement. An
+    # outage scored as zero recall reads as a weak retriever that is very fast.
+    failed: bool = False
 
     def to_context(self, max_chars: int = 1200) -> str:
         """Render numbered passages for synthesis and citation."""
@@ -221,7 +227,9 @@ class RagRetriever:
         try:
             limit = _validate_depth("top_k", limit, MAX_TOP_K)
         except ValueError as exc:
-            return RagAnswer(query, self.mode, self.reranked, ok=False, note=str(exc))
+            # A depth this retriever cannot serve is a misconfiguration, not a
+            # search that came back empty.
+            return RagAnswer(query, self.mode, self.reranked, ok=False, failed=True, note=str(exc))
 
         # Depth is mutable in LangChain retrievers, so keep each call isolated.
         with self._search_lock:
@@ -255,10 +263,16 @@ class RagRetriever:
         limit = self.top_k if top_k is None else top_k
         scores: dict[int, float] = {}
         best: dict[int, Passage] = {}
+        broken = False
+        contributed = 0
         for query in unique:
             answer = self.search(query, top_k=limit)
             if not answer.ok:
+                # A variant that matched nothing still leaves a usable fusion of
+                # the rest; a variant that could not be searched at all does not.
+                broken = broken or answer.failed
                 continue
+            contributed += 1
             for passage in answer.passages:
                 scores[passage.chunk_id] = scores.get(passage.chunk_id, 0.0) + 1.0 / (
                     RRF_K + passage.rank
@@ -268,7 +282,12 @@ class RagRetriever:
 
         if not best:
             return RagAnswer(
-                unique[0], self.mode, self.reranked, ok=False, note="no passage matched any variant"
+                unique[0],
+                self.mode,
+                self.reranked,
+                ok=False,
+                failed=broken,
+                note="no variant could be searched" if broken else "no passage matched any variant",
             )
         ordered = sorted(best.values(), key=lambda p: (-scores[p.chunk_id], p.chunk_id))[:limit]
         passages = [replace(p, rank=rank) for rank, p in enumerate(ordered, start=1)]
@@ -277,5 +296,12 @@ class RagRetriever:
             self.mode,
             self.reranked,
             passages=passages,
-            note=f"fused {len(unique)} query variants by reciprocal rank",
+            # The count of variants that returned something, not the count
+            # asked for: a note saying "fused 4" over three is a provenance lie
+            # in every artifact that carries it.
+            note=(
+                f"fused {contributed} of {len(unique)} query variants by reciprocal rank"
+                if contributed < len(unique)
+                else f"fused {len(unique)} query variants by reciprocal rank"
+            ),
         )

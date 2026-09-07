@@ -23,7 +23,10 @@ data/traces/
 # Processed tables are tracked; see data/processed/README.md.
 
 # --- Eval artifacts ----------------------------------------------------------
-# Ignore raw run logs; track aggregated results.
+# Raw reports carry the retrieved passage text and the rendered tool context,
+# which is bulk rather than evidence. eval/results/runs/ holds the same runs
+# with the bodies stripped and every score, note and rationale kept, and is
+# tracked so a published table can be rechecked from a clone.
 eval/results/raw/
 *.jsonl.gz
 
