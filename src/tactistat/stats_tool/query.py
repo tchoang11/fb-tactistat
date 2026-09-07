@@ -409,6 +409,9 @@ def claimable_values(answer: StatsAnswer) -> dict[str, set[float]]:
         return {}
     metric = answer.metric
     values: dict[str, set[float]] = {metric: set(), "minutes": set(), "appearances": set()}
+    if answer.per90:
+        # "per 90 minutes" names the unit; the guard reads it as a minutes claim.
+        values["minutes"].add(90.0)
     for row in answer.rows:
         values[metric].add(float(row.value))
         values["minutes"].add(float(row.minutes))

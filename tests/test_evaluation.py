@@ -1122,3 +1122,27 @@ def test_a_row_that_errored_is_not_reported_as_waiting_for_a_judge(config):
     summary = aggregate(rows)
     assert summary["errors"] == 1
     assert summary["ungraded"] == 1  # only the row a judge could still reach
+
+
+def test_the_cache_never_stores_or_serves_a_blank_generation(config, tmp_path, restore_llm_cache):
+    """A model that returned nothing once was replayed for every identical prompt."""
+    from langchain_core.globals import get_llm_cache
+    from langchain_core.outputs import ChatGeneration
+
+    from tactistat.llm.registry import configure_cache
+
+    cached = Config(config.to_dict())
+    cached.set("llm.cache_enabled", True)
+    cached.set("llm.cache_dir", str(tmp_path / "llm"))
+    configure_cache(cached)
+    cache = get_llm_cache()
+
+    blank = [ChatGeneration(message=AIMessage(content=""))]
+    cache.update("prompt", "model", blank)
+    assert cache.lookup("prompt", "model") is None
+    # A blank row written by an older build is a miss too, so it is retried.
+    super(type(cache), cache).update("prompt", "model", blank)
+    assert cache.lookup("prompt", "model") is None
+
+    cache.update("prompt", "model", [ChatGeneration(message=AIMessage(content="7 goals"))])
+    assert cache.lookup("prompt", "model")[0].text == "7 goals"

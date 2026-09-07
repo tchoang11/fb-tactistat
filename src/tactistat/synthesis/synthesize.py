@@ -41,7 +41,17 @@ MIN_ANSWER_CHARS = 15
 # stop: "shots. He took 3 corners" is two claims, and reading it as one would
 # bind a number to a metric in the previous sentence.
 _GAP = r"[\s,;:'’\"()\-–—]+"
-_GAP_WORD = r"(?!\d)[^\s.!?]+"
+# A conjunction ends the metric's phrase: "4.23 xG and 7 goals" binds 7 to the
+# goals that follow it, never to the xG before it.
+_GAP_WORD = r"(?!\d)(?!(?:and|or|but|và|hoặc|nhưng)\b)[^\s.!?]+"
+# A number bound to a metric word must be a whole number, not one half of a
+# scoreline: "trận thắng 4-1" is a 4-1 win, not four appearances. The
+# lookbehinds reject a digit that follows "<digit>-", with or without spaces;
+# the lookaheads reject one that a decimal fragment or "-<digit>" continues.
+_COUNT = (
+    r"(?<!\d[-–/])(?<!\d[-–/]\s)(?<!\d\s[-–/])(?<!\d\s[-–/]\s)"
+    r"(\d+(?:[.,]\d+)?)(?![.,]?\d)(?!\s*[-–/]\s*\d)"
+)
 # "3.10 key passes per 90" states a unit, not ninety key passes, and "bàn thứ
 # hai" is the second goal, not two goals. Both only appear when the metric
 # comes first, which is why reading that direction needs them.
@@ -208,11 +218,12 @@ def _surface_index() -> tuple[re.Pattern[str], re.Pattern[str], dict[str, str]]:
     lookup = {word.lower(): metric for metric, words in METRIC_SURFACE.items() for word in words}
     alternation = "|".join(re.escape(word) for word in sorted(lookup, key=len, reverse=True))
     # A short nonnumeric gap avoids binding 2022 to a later goal count.
-    forward = re.compile(
-        rf"(\d+(?:[.,]\d+)?)\s+((?:(?!\d)\S+\s+){{0,2}}?)({alternation})\b", re.IGNORECASE
-    )
+    forward = re.compile(rf"{_COUNT}\s+((?:(?!\d)\S+\s+){{0,2}}?)({alternation})\b", re.IGNORECASE)
+    # "per 90 minutes was 1.21" names a rate's unit, not 1.21 minutes, so a
+    # metric word that itself follows "90" owns no number after it.
     reverse = re.compile(
-        rf"({alternation})\b((?:{_GAP}{_GAP_WORD}){{0,2}}?){_GAP}(\d+(?:[.,]\d+)?)", re.IGNORECASE
+        rf"(?<!90\s)({alternation})\b((?:{_GAP}{_GAP_WORD}){{0,2}}?){_GAP}{_COUNT}",
+        re.IGNORECASE,
     )
     return forward, reverse, lookup
 

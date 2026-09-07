@@ -128,11 +128,43 @@ def configure_cache(config: Config) -> None:
     if database == _CACHE_PATH:
         return
 
-    from langchain_community.cache import SQLiteCache
-
     cache_dir.mkdir(parents=True, exist_ok=True)
-    set_llm_cache(SQLiteCache(database_path=database))
+    set_llm_cache(_sqlite_cache(database))
     _CACHE_PATH = database
+
+
+def generations_have_text(generations: Any) -> bool:
+    """Whether at least one generation carries a non-blank reply."""
+    return any((getattr(item, "text", None) or "").strip() for item in generations or [])
+
+
+def _sqlite_cache(database: str):
+    """A SQLite cache that never stores or serves a blank generation.
+
+    A reasoning model that spends its whole budget thinking returns an empty
+    reply once; cached, that one blank would be replayed for every identical
+    prompt until the file is deleted. Lookup treats a blank row written by an
+    older build as a miss for the same reason.
+    """
+    import warnings
+
+    with warnings.catch_warnings():
+        # The sunset notice; pyproject.toml records why the package is pinned.
+        warnings.simplefilter("ignore", DeprecationWarning)
+        from langchain_community.cache import SQLiteCache
+    # SQLiteCache's row loader warns about a default this code cannot change.
+    warnings.filterwarnings("ignore", message=r".*allowed_objects.*")
+
+    class NonBlankSQLiteCache(SQLiteCache):
+        def lookup(self, prompt: str, llm_string: str):
+            generations = super().lookup(prompt, llm_string)
+            return generations if generations_have_text(generations) else None
+
+        def update(self, prompt: str, llm_string: str, return_val) -> None:
+            if generations_have_text(return_val):
+                super().update(prompt, llm_string, return_val)
+
+    return NonBlankSQLiteCache(database_path=database)
 
 
 def _max_tokens(config: Config, role: str) -> int:

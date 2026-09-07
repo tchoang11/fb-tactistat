@@ -1878,3 +1878,74 @@ def test_the_reverse_matchers_do_not_invent_claims(sentence):
     claims = {"goals": {7.0}, "key_passes": {3.10, 3.00, 2.84}, "shots": {4.0}}
     assert unsupported_metric_claims(sentence, claims) == []
     assert word_number_claims(sentence) == []
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        # "trận thắng 4-1" is a 4-1 win, not four appearances.
+        "Các pha kiến tạo của anh đến từ trận thắng 4-1 của Pháp trước Australia "
+        "và trận thắng 3-1 trước Ba Lan.",
+        "He scored in the 4-1 win over Australia and the 3 - 1 win over Poland.",
+        # A conjunction ends the metric's phrase.
+        "Messi had 4.23 xG and 7 goals.",
+        "Anh có 2 kiến tạo và 7 bàn thắng.",
+    ],
+)
+def test_a_scoreline_or_a_conjunction_does_not_bind_a_number_to_the_wrong_metric(sentence):
+    from tactistat.synthesis.synthesize import unsupported_metric_claims
+
+    claims = {"assists": {2.0}, "goals": {7.0}, "xg": {4.23}, "appearances": {7.0}}
+    assert unsupported_metric_claims(sentence, claims) == []
+
+
+def test_a_count_beside_a_scoreline_is_still_a_claim():
+    from tactistat.synthesis.synthesize import unsupported_metric_claims
+
+    assert unsupported_metric_claims("He won 4-1 in 3 matches.", {"appearances": {7.0}}) == [
+        "3 appearances"
+    ]
+
+
+def test_a_stats_answer_that_names_the_scorelines_passes(config):
+    """A live follow-up turn was rejected for "4 appearances, 3 appearances"."""
+    evidence = (
+        "STATS TOOL — assists (computed from configured event data)\n"
+        "  Kylian Mbappé Lottin (France): 2.00 [597 min, 7 apps]\n"
+        "  matches for Kylian Mbappé Lottin:\n"
+        "    2022-11-22  France 4-1 Australia (Group Stage): 1 in 90 min\n"
+        "    2022-12-04  France 3-1 Poland (Round of 16): 1 in 90 min"
+    )
+    reply = AIMessage(
+        content="Kylian Mbappé đã ghi được 2.00 pha kiến tạo trong toàn bộ giải World Cup 2022. "
+        "Anh tham gia 7 trận, tổng cộng chơi 597 phút. Các pha kiến tạo của anh đến từ trận "
+        "thắng 4-1 của Pháp trước Australia và trận thắng 3-1 trước Ba Lan."
+    )
+    claims = {"assists": {2.0}, "appearances": {7.0}, "minutes": {597.0}}
+    answer = Synthesizer(config, model=fake(reply)).answer(
+        "Mbappé assists?", stats_context=evidence, stats_claims=claims
+    )
+    assert answer.ok is True, answer.note
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Mbappé có tỷ lệ ghi bàn mỗi 90 phút là 1.21, trong khi Messi là 0.91.",
+        "His rate per 90 minutes was 1.21 against 0.91 for Messi.",
+    ],
+)
+def test_a_rate_stated_after_its_per_90_unit_is_not_a_minutes_claim(sentence):
+    from tactistat.synthesis.synthesize import unsupported_metric_claims
+
+    # The tool whitelists the unit's 90 for a per-90 answer; the rate itself is the claim.
+    claims = {"goals": {1.21, 0.91, 0.29}, "minutes": {90.0, 597.0, 690.0}}
+    assert unsupported_metric_claims(sentence, claims) == []
+
+
+def test_minutes_stated_as_a_count_are_still_checked():
+    from tactistat.synthesis.synthesize import unsupported_metric_claims
+
+    assert unsupported_metric_claims("He played 600 minutes.", {"minutes": {597.0}}) == [
+        "600 minutes"
+    ]

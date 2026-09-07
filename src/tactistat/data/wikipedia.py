@@ -9,7 +9,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -546,7 +546,7 @@ def _fetch_one(
         title=page["title"],
         url=page["fullurl"],
         revision_id=page["lastrevid"],
-        fetched_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),  # noqa: UP017 - Python 3.10 compatibility
         license=LICENSE,
         entity_type=spec.entity_type,
         entity_key=spec.entity_key,
